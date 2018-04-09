@@ -18,8 +18,17 @@ for file in os.listdir(directory): # includes .DS_Store not . or ..
         new_file = os.path.join(directory, file)
         files.append(os.fsdecode(new_file))
 
-frameData = SUNRGBD.readFrame(files[1234], True)
         
+"""
+for file in files:
+    frameData = SUNRGBD.readFrame(file, True)
+    labels2D = frameData.labels2D
+    print(labels2D)
+    print(files.index(file))
+"""
+
+
+
 
 # ----------------------------------------------
 # Image Processing 
