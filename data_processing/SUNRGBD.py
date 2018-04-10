@@ -9,6 +9,9 @@ class FrameData:
         self.imgD = imgD
         self.annotation2D = annotation2D
         self.labels2D = labels2D
+
+    def copy(self):
+        return FrameData(self.imgRGB, self.imgD, self.annotation2D, self.labels2D)
         
 def readFrame( framePath, bfx ):
     #read RGB information to numpy array    
