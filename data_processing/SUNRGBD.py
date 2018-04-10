@@ -28,7 +28,10 @@ def readFrame( framePath, bfx ):
     anotation2D = framePath + "/annotation2Dfinal/index.json"
     
     with open(anotation2D) as data_file:    
-        data = json.load(data_file)
+        try:
+            data = json.load(data_file)
+        except:
+            return None
             
     numberOfAnot = len(data["frames"][0]["polygon"]);
     
