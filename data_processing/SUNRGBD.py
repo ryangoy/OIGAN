@@ -2,6 +2,7 @@ import cv2
 from os import listdir
 import json
 import numpy as np
+from copy import deepcopy as copy
 
 class FrameData:
     def __init__(self, imgRGB,imgD,annotation2D,labels2D):
@@ -11,7 +12,21 @@ class FrameData:
         self.labels2D = labels2D
 
     def copy(self):
-        return FrameData(self.imgRGB, self.imgD, self.annotation2D, self.labels2D)
+        new_imgRGB = copy(self.imgRGB)
+        new_imgD = copy(self.imgD)
+        new_annotation2D = copy(self.annotation2D)
+        new_labels2D = copy(self.labels2D)
+
+        return FrameData(new_imgRGB, new_imgD, new_annotation2D, new_labels2D)
+
+    def copy_size(self):
+        # copys the size over and zeros all the image
+        new_imgRGB = np.zeros(self.imgRGB.shape)
+        new_imgD = np.zeros(self.imgD.shape)
+        new_annotation2D = copy(self.annotation2D)
+        new_labels2D = copy(self.labels2D)
+
+        return FrameData(new_imgRGB, new_imgD, new_annotation2D, new_labels2D)
         
 def readFrame( framePath, bfx ):
     #read RGB information to numpy array    
