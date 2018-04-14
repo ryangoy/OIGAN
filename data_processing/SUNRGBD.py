@@ -21,6 +21,7 @@ class FrameData:
 
     def copy_size(self):
         # copys the size over and zeros all the image
+        # can use np.zeros_like
         new_imgRGB = np.zeros(self.imgRGB.shape)
         new_imgD = np.zeros(self.imgD.shape)
         new_annotation2D = copy(self.annotation2D)

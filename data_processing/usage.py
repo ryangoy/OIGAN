@@ -5,6 +5,7 @@ import numpy as np
 import os
 
 BLACK = [0,0,0]
+WHITE = [255,255,255]
 frameDir = "/Users/jeff/Documents/cs280/project/SUNRGB/SUNRGBD/kv2/kinect2data/"
 background_labels = ["FLOOR", "FLOOR1", "BATHROOMFLOOR", "STEELBARROOF", "BASEN", "BRICKDESIGNEDWALL", "WALL", "CEILING1", "STAIRS", "BATHROOMWALL", "FLLOOR", "GLASS1", "BRICKWALL", "FENSE", "BOOTGWALL"]
 
@@ -74,6 +75,10 @@ def get_RGB_with_annotations(frameData):
 	    cv2.putText(imgRGBWithAnnotations, frameData.labels2D[i], (int(centroid[0]), int(centroid[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.7, [0,0,0],2)
     return imgRGBWithAnnotations
 	
+def _show_image(img, name="Image"):
+    cv2.imshow(name, img);
+
+
 def show_image(frameData):
     cv2.imshow("Detph Image", frameData.imgD);
     cv2.imshow("RGB Image", frameData.imgRGB);
@@ -82,31 +87,55 @@ def show_image(frameData):
 
     cv2.waitKey(0);  # I can exit out of this with a capture screen... ??
 
-def polygon_pts(img, annotation):
-    # Initialize empty list
-    import ipdb; ipdb.set_trace(context=21)
-    lst_intensities = []
 
-    # For each list of contour points...
-    for i in range(len(annotation)):
-        # Create a mask image that contains the contour filled in
-        cimg = np.zeros_like(img)
-        cv2.drawContours(cimg, annotation, i, color=255, thickness=-1)
+def keep_annotation(frameData, annotation):
+    # return: data with images of same size but keeping only annotated part and removing outside
+    frameData_copy = frameData.copy()
+    cv2.fillPoly(frameData_copy.imgRGB, [annotation], BLACK)  # color in the image 
+    frameData_copy.imgRGB = frameData.imgRGB - frameData_copy.imgRGB
 
-        # Access the image pixels and create a 1D numpy array then add to list
-        pts = np.where(cimg == 255)
-        lst_intensities.append(img[pts[0], pts[1]])
+    cv2.fillPoly(frameData_copy.imgD, [annotation], BLACK)  # color in the image 
+    frameData_copy.imgD = frameData.imgD - frameData_copy.imgD
+
+    return frameData_copy
 
 
 def split_image(frameData, annotation):
     # splits the image defined by frameData to the image just in the polygon defined by annotation and all outside of it
     # return: [image_in_annotation, image_outside_annotation]
-    im1 = frameData.copy()
-    im2 = frameData.copy()
-    cv2.fillPoly(im2.imgRGB, [annotation], BLACK)
-    show_image(im2)
-    #polygon_pts(im1.imgRGB, annotation)
-    return im1,im2
+    # Handle image inside annotation
+    im_i = keep_annotation(frameData, annotation)
+
+    # Handle image outside annotation
+    im_o = frameData.copy()
+
+    color_mean = calc_avg_px_val(frameData.imgRGB)
+    depth_background = calc_surrounding_px_val(frameData.imgD, annotation)
+
+    cv2.fillPoly(im_o.imgRGB, [annotation], color_mean)  # color out the object in background image
+    cv2.fillPoly(im_o.imgD, [annotation], depth_background)  # color out the object in depth image
+
+    # TODO 2. blur the background image 
+    blur = cv2.GaussianBlur(img,(5,5),0)
+
+    return im_i, im_o
+
+def calc_avg_px_val(img):
+    # img is a h x w x 3 image
+    rgb_means = np.mean(img, axis=(0,1)) # TODO is this axis thing correct?
+    return rgb_means
+
+
+def calc_surrounding_px_val(img, annotation):
+    # TODO I don't trust this, doesn't look too good
+    shape = (img.shape[0], img.shape[1], 1)
+    img_helper = np.zeros(shape)
+    cv2.fillPoly(img_helper, [annotation], WHITE)  # color out the object in background image
+    pts = np.where(img_helper == 255)
+
+    intensities = np.array(img[pts[0], pts[1]])
+    px = np.mean(intensities, axis=0)
+    return px
 
 
 foreground_imgs = []
@@ -118,5 +147,15 @@ for label, annotation in zip(frameData.labels2D, frameData.annotation2D):
     foreground_imgs.append(foreground_img)
     background_imgs.append(background_img)
 
-#show_image(background_imgs[6])
+show_image(background_imgs[0])
+show_image(foreground_imgs[0])
+
+
+def run_data(data):
+    # TODO 1. Implement this 
+    foreground_imgs = []
+    background_imgs = []
+    for frameData in data:
+        pass
+    # TODO 3. Implement save
 
