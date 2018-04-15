@@ -54,7 +54,6 @@ def save_readable(txt):
         f.write(str(txt))
 
 data = load_data(frameDir, single=True)
-frameData = data[0]
 
 # ----------------------------------------------
 # Image Processing 
@@ -116,7 +115,7 @@ def split_image(frameData, annotation):
     cv2.fillPoly(im_o.imgD, [annotation], depth_background)  # color out the object in depth image
 
     # TODO 2. blur the background image 
-    blur = cv2.GaussianBlur(img,(5,5),0)
+    #blur = cv2.GaussianBlur(img,(5,5),0)
 
     return im_i, im_o
 
@@ -138,24 +137,36 @@ def calc_surrounding_px_val(img, annotation):
     return px
 
 
-foreground_imgs = []
-background_imgs = []
-for label, annotation in zip(frameData.labels2D, frameData.annotation2D):
-    if check_label_for_background(label, background_labels):
-        continue
-    foreground_img, background_img = split_image(frameData, annotation)
-    foreground_imgs.append(foreground_img)
-    background_imgs.append(background_img)
-
-show_image(background_imgs[0])
-show_image(foreground_imgs[0])
-
-
-def run_data(data):
-    # TODO 1. Implement this 
+def extract_frameData(frameData):
     foreground_imgs = []
     background_imgs = []
-    for frameData in data:
-        pass
-    # TODO 3. Implement save
+    for label, annotation in zip(frameData.labels2D, frameData.annotation2D):
+        if check_label_for_background(label, background_labels):
+            continue
+        foreground_img, background_img = split_image(frameData, annotation)
+        foreground_imgs.append(foreground_img)
+        background_imgs.append(background_img)
+    return foreground_imgs, background_imgs
 
+def _save_image(img, name=""):
+    cv2.imwrite(name + "RBG.png", img)
+
+def _save_images(frameData_list, name=""):
+    for i, frameData in enumerate(frameData_list):
+        imgRGB = frameData.imgRGB
+        imgD = frameData.imgD
+        cv2.imwrite(name + str(i) + "RBG.png", imgRGB)
+        cv2.imwrite(name + str(i) + "D.png", imgD)
+
+def save_images(data, name=""):
+    for i, frameData in enumerate(data):
+        f, b = extract_frameData(frameData)
+        _save_images(f, str(i) + "foreground")
+        _save_images(b, str(i) + "background")
+        _save_images([frameData], str(i) + "original")
+        annotated_img = get_RGB_with_annotations(frameData)
+        _save_image(annotated_img, str(i) + "annotated")
+
+
+
+save_images(data, 'fore')
