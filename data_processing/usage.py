@@ -129,7 +129,7 @@ def calc_surrounding_px_val(img, annotation):
     # TODO I don't trust this, doesn't look too good
     shape = (img.shape[0], img.shape[1], 1)
     img_helper = np.zeros(shape)
-    cv2.fillPoly(img_helper, [annotation], WHITE)  # color out the object in background image
+    img_helper = cv2.drawContours(img_helper, [annotation], -1, WHITE, 5)
     pts = np.where(img_helper == 255)
 
     intensities = np.array(img[pts[0], pts[1]])
@@ -161,12 +161,10 @@ def _save_images(frameData_list, name=""):
 def save_images(data, name=""):
     for i, frameData in enumerate(data):
         f, b = extract_frameData(frameData)
-        _save_images(f, str(i) + "foreground")
-        _save_images(b, str(i) + "background")
-        _save_images([frameData], str(i) + "original")
+        _save_images(f, name + str(i) + "foreground")
+        _save_images(b, name + str(i) + "background")
+        _save_images([frameData], name + str(i) + "original")
         annotated_img = get_RGB_with_annotations(frameData)
-        _save_image(annotated_img, str(i) + "annotated")
+        _save_image(annotated_img, name + str(i) + "annotated")
 
-
-
-save_images(data, 'fore')
+save_images(data)
