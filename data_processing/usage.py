@@ -99,24 +99,69 @@ def keep_annotation(frameData, annotation):
     return frameData_copy
 
 
+def find_annotated_box(im, annotation, padding=[20, 20]):
+    # get the box we are working with 
+    pts = np.array(list(zip(*annotation)))
+    top_right_initial = np.max(pts, axis=1)
+    bottom_left_initial = np.min(pts, axis=1)
+
+    top_right = [top_right_initial[0] + padding[0], top_right_initial[1] + padding[1]]
+    bottom_left = [bottom_left_initial[0] - padding[0], bottom_left_initial[1] - padding[1]]
+
+    x2, y2 = top_right
+    x1, y1 = bottom_left
+    x1 = max(x1, 0)
+    y1 = max(y1, 0)
+    return y1, y2, x1, x2 # not sure why needs to be flipped
+
+
+
+def blur_annotated_area(im, annotation):
+    l, w, _ = im.shape
+
+    x1, x2, y1, y2 = find_annotated_box(im, annotation)
+
+    # Pick out the subimage we want to work with
+    subim = im [x1:x2, y1:y2]
+
+    # Apply strong Gaussian blurring onto the subimage
+    subim_blurred = cv2.GaussianBlur(subim, (5,5), 20)
+    subim_blurred = cv2.GaussianBlur(subim_blurred, (5,5), 20)
+    subim_blurred = cv2.GaussianBlur(subim_blurred, (7,7), 20)
+    subim_blurred = cv2.GaussianBlur(subim_blurred, (7,7), 20)
+    subim_blurred = cv2.GaussianBlur(subim_blurred, (7,7), 20)
+    subim_blurred = cv2.GaussianBlur(subim_blurred, (3,3), 2)
+
+    # Put it back into the original image
+    im[x1:x2, y1:y2] = subim_blurred
+
+    # Blur the image slightly
+    #im = cv2.GaussianBlur(im, (7, 7), 10)
+    return im 
+
+
 def split_image(frameData, annotation):
     # splits the image defined by frameData to the image just in the polygon defined by annotation and all outside of it
     # return: [image_in_annotation, image_outside_annotation]
     # Handle image inside annotation
     im_i = keep_annotation(frameData, annotation)
 
+    # vary the brightness of the foreground RGB image
+    im_i.imgRGB = im_i.imgRGB.astype(np.float32) * np.random.random() * (0.3) + 0.85
+    im_i.imgRGB = im_i.imgRGB.astype(np.uint8)
+
     # Handle image outside annotation
     im_o = frameData.copy()
 
     color_mean = calc_avg_px_val(frameData.imgRGB)
-    depth_background = calc_surrounding_px_val(frameData.imgD, annotation)
+    cv2.fillPoly(im_o.imgRGB, [annotation], color_mean)  # color out object in background image
 
-    cv2.fillPoly(im_o.imgRGB, [annotation], color_mean)  # color out the object in background image
+    depth_background = calc_surrounding_px_val(frameData.imgD, annotation)
     cv2.fillPoly(im_o.imgD, [annotation], depth_background)  # color out the object in depth image
 
-    # TODO 2. blur the background image 
-    #blur = cv2.GaussianBlur(img,(5,5),0)
-
+    # blur the background rgb image 
+    im_o.imgRGB = blur_annotated_area(im_o.imgRGB, annotation)
+    
     return im_i, im_o
 
 def calc_avg_px_val(img):
@@ -136,11 +181,30 @@ def calc_surrounding_px_val(img, annotation):
     px = np.mean(intensities, axis=0)
     return px
 
+def calc_size_of_image(img):
+    l, w, c = img.shape
+    return w * l 
+
+def calc_size_of_annotation(img, annotation):
+    shape = (img.shape[0], img.shape[1], 1)
+    img_helper = np.zeros(shape)
+    img_helper = cv2.fillPoly(img_helper, [annotation], WHITE)
+    pts = np.where(img_helper == 255)
+    return len(pts[0])
+
 
 def extract_frameData(frameData):
     foreground_imgs = []
     background_imgs = []
+    num_pxl_in_image = calc_size_of_image(frameData.imgRGB)
     for label, annotation in zip(frameData.labels2D, frameData.annotation2D):
+        num_pxl_in_annotation = calc_size_of_annotation(frameData.imgRGB, annotation)
+        annot_ratio = num_pxl_in_annotation / num_pxl_in_image 
+        if annot_ratio > 0.5:  # taking up half of the scene, too big
+            continue
+        if annot_ratio < 0.02:  # too small 
+            continue
+
         if check_label_for_background(label, background_labels):
             continue
         foreground_img, background_img = split_image(frameData, annotation)
