@@ -153,7 +153,7 @@ def split_image(frameData, annotation):
     # Handle image outside annotation
     im_o = frameData.copy()
 
-    color_mean = calc_avg_px_val(frameData.imgRGB)
+    color_mean = calc_surrounding_px_val(frameData.imgRGB, annotation)
     cv2.fillPoly(im_o.imgRGB, [annotation], color_mean)  # color out object in background image
 
     depth_background = calc_surrounding_px_val(frameData.imgD, annotation)
@@ -166,20 +166,20 @@ def split_image(frameData, annotation):
 
 def calc_avg_px_val(img):
     # img is a h x w x 3 image
-    rgb_means = np.mean(img, axis=(0,1)) # TODO is this axis thing correct?
+    rgb_means = np.mean(img, axis=(0,1)) 
     return rgb_means
 
 
 def calc_surrounding_px_val(img, annotation):
-    # TODO I don't trust this, doesn't look too good
-    shape = (img.shape[0], img.shape[1], 1)
-    img_helper = np.zeros(shape)
-    img_helper = cv2.drawContours(img_helper, [annotation], -1, WHITE, 5)
-    pts = np.where(img_helper == 255)
+    # TODO I mean this is OK, but would be nice if we had a nearest pixel techquie
+    # Find image values around annotation
+    img_helper = np.copy(img)
+    img_helper = cv2.fillPoly(img_helper, [annotation], BLACK) 
+    x1, x2, y1, y2 = find_annotated_box(img, annotation, padding=[2,2])
+    intensities = img_helper[x1:x2, y1:y2]
 
-    intensities = np.array(img[pts[0], pts[1]])
-    px = np.mean(intensities, axis=0)
-    return px
+    px = np.mean(intensities, axis=(0,1))
+    return px 
 
 def calc_size_of_image(img):
     l, w, c = img.shape
