@@ -153,6 +153,8 @@ def split_image(frameData, annotation):
     # Handle image outside annotation
     im_o = frameData.copy()
 
+
+#frameData.imgRGB = replace_annotated_with_background(frameData.imgRGB, annotation)
     color_mean = calc_surrounding_px_val(frameData.imgRGB, annotation)
     cv2.fillPoly(im_o.imgRGB, [annotation], color_mean)  # color out object in background image
 
@@ -191,6 +193,28 @@ def calc_size_of_annotation(img, annotation):
     img_helper = cv2.fillPoly(img_helper, [annotation], WHITE)
     pts = np.where(img_helper == 255)
     return len(pts[0])
+
+def replace_annotated_with_background(img, annotation):
+    """
+    Replace annotated part of the image with the nearest pixel from unannotated part of the image
+    NOTE: THIS HAS HORRIBLE RUNTIME
+    """
+    shp = (img.shape[0], img.shape[1])
+    img_helper = np.zeros(shp)
+    img_helper = cv2.fillPoly(img_helper, [annotation], 255) 
+    x1, x2, y1, y2 = find_annotated_box(img, annotation, padding=[1,1])
+    bitmap = img_helper == 0 
+    pts = np.where(bitmap[x1:x2, y1:y2])
+    pts = [np.array(p) for p in zip(*pts)]
+
+    annot_pts = np.where(img_helper == 255)
+
+    for annot_pt in zip(*annot_pts):
+        annot_pt = np.array(annot_pt)
+        desired_pt = min(pts, key= lambda x: np.linalg.norm(x - annot_pt))
+        img[tuple(annot_pt)] = np.copy(img[tuple(desired_pt)])
+
+    return img
 
 
 def extract_frameData(frameData):
