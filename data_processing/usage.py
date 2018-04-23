@@ -134,6 +134,7 @@ def save_images(data, name=""):
         _save_images([frameData], name + str(i) + "original")
         annotated_img = get_RGB_with_annotations(frameData)
         _save_image(annotated_img, name + str(i) + "annotated")
+        print("Finished processing image " + str(i))
 
 
 if __name__ == "__main__":
