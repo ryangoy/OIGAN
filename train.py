@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 from networks import build_generator, build_discriminator, GANLoss, print_network
 
 import torch.backends.cudnn as cudnn
+from scipy.stats import multivariate_normal
 
 # Training settings
 parser = argparse.ArgumentParser(description='OIGAN PyTorch implementation')
@@ -18,7 +19,7 @@ parser.add_argument('--dataset', default='sunrgbd', help='type of dataset')
 parser.add_argument('--batchSize', type=int, default=1, help='training batch size')
 parser.add_argument('--testBatchSize', type=int, default=1, help='testing batch size')
 parser.add_argument('--nEpochs', type=int, default=200, help='number of epochs to train for')
-parser.add_argument('--input_channels', type=int, default=4, help='input image channels')
+parser.add_argument('--input_channels', type=int, default=5, help='input image channels')
 parser.add_argument('--output_channels', type=int, default=3, help='output image channels')
 parser.add_argument('--num_gen_filters', type=int, default=64, help='generator filters in first conv layer')
 parser.add_argument('--num_dis_filters', type=int, default=64, help='discriminator filters in first conv layer')
@@ -60,6 +61,7 @@ D = build_discriminator(opt.input_channels + opt.output_channels, opt.num_dis_fi
 criterionGAN = GANLoss()
 criterionL1 = nn.L1Loss()
 criterionMSE = nn.MSELoss()
+criterionSLL = SLLoss()
 
 # Set up optimizer
 optimizerG = optim.Adam(netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -71,6 +73,7 @@ print_network(netD)
 # Train
 real_a = torch.FloatTensor(opt.batchSize, opt.input_nc, 256, 256)
 real_b = torch.FloatTensor(opt.batchSize, opt.output_nc, 256, 256)
+coords = torch.FloatTensor(opt.batchSize, 4)
 
 
 if opt.cuda:
@@ -84,6 +87,7 @@ if opt.cuda:
 
 real_a = Variable(real_a)
 real_b = Variable(real_b)
+coords = Variable(coords)
 
 
 for epoch in range(1, opt.nEpochs + 1):
@@ -93,12 +97,45 @@ for epoch in range(1, opt.nEpochs + 1):
         checkpoint(epoch)
 
 
+class SLLoss(nn.Module):
+    def __init__(self, tensor=torch.FloatTensor, use_lsgan=True):
+        super(SLLoss, self).__init__()
+
+        self.Tensor = tensor
+        if use_lsgan:
+            self.loss = nn.MSELoss()
+        else:
+            self.loss = nn.BCELoss()
+
+    def get_weighting_tensor(self, pred, coords):
+        weightings = []
+        for coord in coords:
+            center = [(coord[0]+coord[2])/2, (coord[1]+coord[3])/2]
+            half_length = [(coord[2]-coord[0])/2, (coord[3]-coord[1])/2]
+            x = np.linspace(0, pred.shape[1], pred.shape[2])
+            weightings.append(multivariate_normal(x, mean=center, cov=half_length))
+
+        
+        target_tensor = torch.from_numpy(np.array(weightings))
+        target_tensor = Variable(target_tensor, requires_grad=False)
+
+        return target_tensor
+
+    # pred and label are shape [batch, height, width, channels]
+    # coords are of shape [batch, 4]
+    def __call__(self, pred, label, coords):
+        weightings = self.get_weighting_tensor(pred, coords)
+        return self.loss(weightings*pred, weightings*label)
+
+
+
 def train(epoch):
     for iteration, batch in enumerate(training_data_loader, 1):
         # forward
-        real_a_cpu, real_b_cpu = batch[0], batch[1]
+        real_a_cpu, real_b_cpu, coords_cpu = batch[0], batch[1], batch[2]
         real_a.data.resize_(real_a_cpu.size()).copy_(real_a_cpu)
         real_b.data.resize_(real_b_cpu.size()).copy_(real_b_cpu)
+        coords.data.resize_(coords_cpu.size()).copy_(coords_cpu)
         fake_b = netG(real_a)
 
         ############################
@@ -112,10 +149,12 @@ def train(epoch):
         pred_fake = netD.forward(fake_ab.detach())
         loss_d_fake = criterionGAN(pred_fake, False)
 
+
         # train with real
         real_ab = torch.cat((real_a, real_b), 1)
         pred_real = netD.forward(real_ab)
         loss_d_real = criterionGAN(pred_real, True)
+
         
         # Combined loss
         loss_d = (loss_d_fake + loss_d_real) * 0.5
@@ -135,6 +174,7 @@ def train(epoch):
 
          # Second, G(A) = B
         loss_g_l1 = criterionL1(fake_b, real_b) * opt.lamb
+        loss_g_sl = criterionSLL(fake_b, real_b, coords)
         
         loss_g = loss_g_gan + loss_g_l1
         
