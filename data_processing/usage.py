@@ -137,5 +137,5 @@ def save_images(data, name=""):
 
 
 if __name__ == "__main__":
-    data = load_data(frameDir, num_samples=2)
+    data = load_data(frameDir)
     save_images(data)
