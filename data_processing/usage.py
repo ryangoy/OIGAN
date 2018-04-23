@@ -1,11 +1,12 @@
-import cv2
-import SUNRGBD
-import random as rand
-import numpy as np
+# import cv2
+# import SUNRGBD
+# import random as rand
+# import numpy as np
 import os
-from helper import *
+# from helper import *
 from foreground import *
 from background import *
+# import os.path as osp
 
 BLACK = [0,0,0]
 WHITE = [255,255,255]
@@ -18,7 +19,7 @@ background_labels = ["FLOOR", "FLOOR1", "BATHROOMFLOOR", "STEELBARROOF", "BASEN"
 
 #frameDir = "/Users/jeff/Documents/cs280/project/SUNRGB/SUNRGBD/kv1/NYUdata/"
 
-def load_data(frameDir, single=False):
+def load_data(frameDir, num_samples=None):
     """
     Looks in frameDir for all the files with a certain ending (thats how we know its an image folder) and
     reads it into a frameData object
@@ -33,8 +34,8 @@ def load_data(frameDir, single=False):
             new_file = os.path.join(directory, file)
             files.append(os.fsdecode(new_file))
     data = []                                         
-    if single:
-        files = [files[4]]
+    if num_samples is not None:
+        files = files[43:43+num_samples]
     for file in files:
         frameData = SUNRGBD.readFrame(file, True)
         if frameData is None:
@@ -56,8 +57,6 @@ def check_label_for_background(label, background_labels):
 def save_readable(txt):
     with open(str(type(txt)), 'w') as f:
         f.write(str(txt))
-
-data = load_data(frameDir, single=True)
 
 # ----------------------------------------------
 # Image Display 
@@ -128,6 +127,7 @@ def save_images(data, name=""):
     for each object edited in each image
     """
     for i, frameData in enumerate(data):
+        # datum_name = name + str(i)
         f, b = extract_frameData(frameData)
         _save_images(f, name + str(i) + "foreground")
         _save_images(b, name + str(i) + "background")
@@ -135,4 +135,7 @@ def save_images(data, name=""):
         annotated_img = get_RGB_with_annotations(frameData)
         _save_image(annotated_img, name + str(i) + "annotated")
 
-save_images(data)
+
+if __name__ == "__main__":
+    data = load_data(frameDir, num_samples=2)
+    save_images(data)
