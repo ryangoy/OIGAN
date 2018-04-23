@@ -128,13 +128,17 @@ def save_images(data, name=""):
     """
     for i, frameData in enumerate(data):
         # datum_name = name + str(i)
-        f, b = extract_frameData(frameData)
-        _save_images(f, name + str(i) + "foreground")
-        _save_images(b, name + str(i) + "background")
-        _save_images([frameData], name + str(i) + "original")
-        annotated_img = get_RGB_with_annotations(frameData)
-        _save_image(annotated_img, name + str(i) + "annotated")
-        print("Finished processing image " + str(i))
+        try: 
+            f, b = extract_frameData(frameData)
+            _save_images(f, name + str(i) + "foreground")
+            _save_images(b, name + str(i) + "background")
+            _save_images([frameData], name + str(i) + "original")
+            annotated_img = get_RGB_with_annotations(frameData)
+            _save_image(annotated_img, name + str(i) + "annotated")
+            print("Finished processing image " + str(i))
+        except Exception as e:
+            print("Unable to process image " + str(i))
+            print(e)
 
 
 if __name__ == "__main__":
