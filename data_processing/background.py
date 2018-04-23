@@ -14,13 +14,42 @@ def blur_annotated_area(im, annotation):
   # Pick out the subimage we want to work with
   subim = im [x1:x2, y1:y2]
 
+  l_sub, w_sub, c_sub = subim.shape
+
   # Apply strong Gaussian blurring onto the subimage
   subim_blurred = cv2.GaussianBlur(subim, (5,5), 20)
   subim_blurred = cv2.GaussianBlur(subim_blurred, (5,5), 20)
   subim_blurred = cv2.GaussianBlur(subim_blurred, (7,7), 20)
   subim_blurred = cv2.GaussianBlur(subim_blurred, (7,7), 20)
   subim_blurred = cv2.GaussianBlur(subim_blurred, (7,7), 20)
+  subim_blurred = cv2.blur(subim_blurred, (7,7))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (15,15))
+  subim_blurred = cv2.blur(subim_blurred, (7,7))
+  subim_blurred = cv2.blur(subim_blurred, (17,17))
+  subim_blurred = cv2.blur(subim_blurred, (7,7))
+  subim_blurred = cv2.blur(subim_blurred, (7,7))
+  subim_blurred = cv2.GaussianBlur(subim_blurred, (7,7), 20)
+  subim_blurred = cv2.GaussianBlur(subim_blurred, (7,7), 20)
+  subim_blurred = cv2.GaussianBlur(subim_blurred, (7,7), 20)
+  subim_blurred = cv2.GaussianBlur(subim_blurred, (7,7), 20)
   subim_blurred = cv2.GaussianBlur(subim_blurred, (3,3), 2)
+  subim_blurred = subim_blurred + np.random.standard_normal(size=(l_sub, w_sub, c_sub)) * 26
 
   # Put it back into the original image
   im[x1:x2, y1:y2] = subim_blurred
@@ -31,8 +60,8 @@ def blur_annotated_area(im, annotation):
 
 def get_background_image(frameData, annotation):
   # Take the colors surrounding the annotated box
-  color_mean = calc_surrounding_px_val(frameData.imgRGB, annotation)
-  cv2.fillPoly(frameData.imgRGB, [annotation], color_mean)  # color out object in background image
+  # color_mean = calc_surrounding_px_val(frameData.imgRGB, annotation)
+  # cv2.fillPoly(frameData.imgRGB, [annotation], color_mean)  # color out object in background image
 
   # Take the depth surrounding the annotated box
   depth_background = calc_surrounding_px_val(frameData.imgD, annotation)

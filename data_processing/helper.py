@@ -31,15 +31,24 @@ def calc_avg_px_val(img):
 
 
 def calc_surrounding_px_val(img, annotation):
-  # TODO I mean this is OK, but would be nice if we had a nearest pixel techquie
+  """
+  We find a loose bounding box around the annotation and find the mean pixel value outside the annotation
+  """
   # Find image values around annotation
   img_helper = np.copy(img)
   img_helper = cv2.fillPoly(img_helper, [annotation], BLACK)
   x1, x2, y1, y2 = find_annotated_box(img, annotation, padding=[2,2])
   intensities = img_helper[x1:x2, y1:y2]
 
-  px = np.mean(intensities, axis=(0,1))
-  return px
+  w, l, c = intensities.shape
+  intensities = intensities.reshape(w*l, c)
+  num_pixels = w * l
+  num_nonzero_pixels = np.count_nonzero(intensities, axis=0)[0]  # counts number of nonzero per channel. should be 3 of same #
+
+  mu = np.mean(intensities, axis=0)
+  # in calculating mean, we used num_pixels when we should have used num_nonzero_pixels. We make up for it now
+  normalized_mu = mu * num_pixels / num_nonzero_pixels
+  return normalized_mu
 
 def calc_size_of_image(img):
   l, w, c = img.shape

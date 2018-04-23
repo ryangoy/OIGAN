@@ -34,7 +34,7 @@ def load_data(frameDir, single=False):
             files.append(os.fsdecode(new_file))
     data = []                                         
     if single:
-        files = [files[9]]
+        files = [files[4]]
     for file in files:
         frameData = SUNRGBD.readFrame(file, True)
         if frameData is None:
@@ -135,5 +135,4 @@ def save_images(data, name=""):
         annotated_img = get_RGB_with_annotations(frameData)
         _save_image(annotated_img, name + str(i) + "annotated")
 
-import ipdb; ipdb.set_trace(context=21)
 save_images(data)
