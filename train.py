@@ -46,55 +46,11 @@ if opt.cuda:
     torch.cuda.manual_seed(opt.seed)
 
 
-# Load data
-
-
-
-# Make the model
-G = build_generator(opt.input_channels, opt.output_channels, opt.num_gen_filters, opt.num_gen_ds, opt.num_gen_blocks, 
-                    norm_fn=nn.BatchNorm2d, use_dropout=False, gpu_ids=[0])
-
-D = build_discriminator(opt.input_channels + opt.output_channels, opt.num_dis_filters, norm_fn=nn.BatchNorm2d, use_sigmoid=False, gpu_ids=[0])
-
-
-# Set up loss
-criterionGAN = GANLoss()
-criterionL1 = nn.L1Loss()
-criterionMSE = nn.MSELoss()
-criterionSLL = SLLoss()
-
-# Set up optimizer
-optimizerG = optim.Adam(netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
-optimizerD = optim.Adam(netD.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
-
-print_network(netG)
-print_network(netD)
-
-# Train
-real_a = torch.FloatTensor(opt.batchSize, opt.input_nc, 256, 256)
-real_b = torch.FloatTensor(opt.batchSize, opt.output_nc, 256, 256)
-coords = torch.FloatTensor(opt.batchSize, 4)
-
-
-if opt.cuda:
-    netD = netD.cuda()
-    netG = netG.cuda()
-    criterionGAN = criterionGAN.cuda()
-    criterionL1 = criterionL1.cuda()
-    criterionMSE = criterionMSE.cuda()
-    real_a = real_a.cuda()
-    real_b = real_b.cuda()
-
-real_a = Variable(real_a)
-real_b = Variable(real_b)
-coords = Variable(coords)
-
-
-for epoch in range(1, opt.nEpochs + 1):
-    train(epoch)
-    validate()
-    if epoch % 50 == 0:
-        checkpoint(epoch)
+root_path = "dataset/"
+train_set = get_training_set(root_path + opt.dataset)
+test_set = get_test_set(root_path + opt.dataset)
+training_data_loader = DataLoader(dataset=train_set, num_workers=opt.threads, batch_size=opt.batchSize, shuffle=True)
+testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batch_size=opt.testBatchSize, shuffle=False)
 
 
 class SLLoss(nn.Module):
@@ -146,13 +102,13 @@ def train(epoch):
         
         # train with fake
         fake_ab = torch.cat((real_a, fake_b), 1)
-        pred_fake = netD.forward(fake_ab.detach())
+        pred_fake = D.forward(fake_ab.detach())
         loss_d_fake = criterionGAN(pred_fake, False)
 
 
         # train with real
         real_ab = torch.cat((real_a, real_b), 1)
-        pred_real = netD.forward(real_ab)
+        pred_real = D.forward(real_ab)
         loss_d_real = criterionGAN(pred_real, True)
 
         
@@ -176,7 +132,7 @@ def train(epoch):
         loss_g_l1 = criterionL1(fake_b, real_b) * opt.lamb
         loss_g_sl = criterionSLL(fake_b, real_b, coords)
         
-        loss_g = loss_g_gan + loss_g_l1
+        loss_g = loss_g_gan + loss_g_l1 + loss_g_sl
         
         loss_g.backward()
 
@@ -209,3 +165,56 @@ def checkpoint(epoch):
     torch.save(netG, net_g_model_out_path)
     torch.save(netD, net_d_model_out_path)
     print("Checkpoint saved to {}".format("checkpoint" + opt.dataset))
+
+# Load data
+
+
+
+# Make the model
+G = build_generator(opt.input_channels, opt.output_channels, opt.num_gen_filters, opt.num_gen_ds, opt.num_gen_blocks, 
+                    norm_fn=nn.BatchNorm2d, use_dropout=False, gpu_ids=[0])
+
+D = build_discriminator(opt.input_channels + opt.output_channels, opt.num_dis_filters, norm_fn=nn.BatchNorm2d, use_sigmoid=False, gpu_ids=[0])
+
+
+# Set up loss
+criterionGAN = GANLoss()
+criterionL1 = nn.L1Loss()
+criterionMSE = nn.MSELoss()
+criterionSLL = SLLoss()
+
+# Set up optimizer
+optimizerG = optim.Adam(list(G.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999))
+optimizerD = optim.Adam(list(D.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999))
+
+print_network(G)
+print_network(D)
+
+# Train
+real_a = torch.FloatTensor(opt.batchSize, opt.input_channels, 256, 256)
+real_b = torch.FloatTensor(opt.batchSize, opt.output_channels, 256, 256)
+coords = torch.FloatTensor(opt.batchSize, 4)
+
+
+if opt.cuda:
+    D = D.cuda()
+    G = G.cuda()
+    criterionGAN = criterionGAN.cuda()
+    criterionL1 = criterionL1.cuda()
+    criterionMSE = criterionMSE.cuda()
+    real_a = real_a.cuda()
+    real_b = real_b.cuda()
+
+real_a = Variable(real_a)
+real_b = Variable(real_b)
+coords = Variable(coords)
+
+
+for epoch in range(1, opt.nEpochs + 1):
+    train(epoch)
+    validate()
+    if epoch % 50 == 0:
+        checkpoint(epoch)
+
+
+

@@ -10,7 +10,7 @@ from background import *
 
 BLACK = [0,0,0]
 WHITE = [255,255,255]
-frameDir = "/Users/jeff/Documents/cs280/project/SUNRGB/SUNRGBD/kv2/kinect2data/"
+frameDir = "/home/ryan/cs/datasets/SUNRGBD/kv2/kinect2data/"
 background_labels = ["FLOOR", "FLOOR1", "BATHROOMFLOOR", "STEELBARROOF", "BASEN", "BRICKDESIGNEDWALL", "WALL", "CEILING1", "STAIRS", "BATHROOMWALL", "FLLOOR", "GLASS1", "BRICKWALL", "FENSE", "BOOTGWALL"]
 
 # ----------------------------------------------
