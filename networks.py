@@ -59,7 +59,7 @@ def build_generator(input_channels, output_channels, num_filters, num_downsample
     use_gpu = len(gpu_ids) > 0
     if use_gpu:
         assert(torch.cuda.is_available())
-    G = Generator(input_channels, output_channels, num_filters, num_downsample, num_blocks, norm_fn=nn.BatchNorm2d, use_dropout=True, gpu_ids=[])
+    G = Generator(input_channels, output_channels, num_filters, num_downsample, num_blocks, norm_fn=nn.BatchNorm2d, use_dropout=True, gpu_ids=gpu_ids)
     if use_gpu:
         G.cuda(gpu_ids[0])
     G.apply(initialize_weights)
@@ -99,7 +99,7 @@ class Generator(nn.Module):
         layers += [nn.Conv2d(num_filters, 3, kernel_size=7, padding=3)]
         layers += [nn.Tanh()]
 
-        self.model = nn.Sequential(*layers)
+        return nn.Sequential(*layers)
         
     def forward(self, input):
         if self.gpu_ids and isinstance(input.data, torch.cuda.FloatTensor):
@@ -136,7 +136,7 @@ def build_discriminator(input_channels, num_filters, norm_fn=nn.BatchNorm2d, use
 
     if use_gpu:
         netD.cuda(gpu_ids[0])
-    netD.apply(weights_init)
+    netD.apply(initialize_weights)
     return netD
 
 class Discriminator(nn.Module):
