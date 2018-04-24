@@ -50,6 +50,7 @@ def blur_annotated_area(im, annotation):
   subim_blurred = cv2.GaussianBlur(subim_blurred, (7,7), 20)
   subim_blurred = cv2.GaussianBlur(subim_blurred, (3,3), 2)
   subim_blurred = subim_blurred + np.random.standard_normal(size=(l_sub, w_sub, c_sub)) * 26
+  subim_blurred = np.clip(subim_blurred, 0, 255)
 
   # Put it back into the original image
   im[x1:x2, y1:y2] = subim_blurred
