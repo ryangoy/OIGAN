@@ -25,6 +25,7 @@ def get_foreground_image(frameData, annotation):
 
   # vary the brightness of the foreground RGB image
   frameData.imgRGB = frameData.imgRGB.astype(np.float32) * (np.random.random() * 0.3 + 0.85)
+  frameData.imgRGB = np.clip(frameData.imgRGB, 0, 255)
   frameData.imgRGB = frameData.imgRGB.astype(np.uint8)
   return frameData
 

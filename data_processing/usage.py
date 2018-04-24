@@ -19,7 +19,7 @@ background_labels = ["FLOOR", "FLOOR1", "BATHROOMFLOOR", "STEELBARROOF", "BASEN"
 
 #frameDir = "/Users/jeff/Documents/cs280/project/SUNRGB/SUNRGBD/kv1/NYUdata/"
 
-def load_data(frameDir, num_samples=None):
+def load_data(frameDir, num_samples=None, start_index=49):
     """
     Looks in frameDir for all the files with a certain ending (thats how we know its an image folder) and
     reads it into a frameData object
@@ -35,7 +35,7 @@ def load_data(frameDir, num_samples=None):
             files.append(os.fsdecode(new_file))
     data = []                                         
     if num_samples is not None:
-        files = files[43:43+num_samples]
+        files = files[start_index:start_index+num_samples]
     for file in files:
         frameData = SUNRGBD.readFrame(file, True)
         if frameData is None:
