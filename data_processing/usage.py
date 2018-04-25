@@ -114,8 +114,8 @@ def _save_images(frameData_list, name=""):
     for i, frameData in enumerate(frameData_list):
         imgRGB = frameData.imgRGB
         imgD = frameData.imgD
-        cv2.imwrite(name + str(i) + "RBG.png", imgRGB)
-        cv2.imwrite(name + str(i) + "D.png", imgD)
+        cv2.imwrite(name + str(i) + ".png", imgRGB)
+        cv2.imwrite(name + str(i) + ".png", imgD)
 
 def save_images(data, name=""):
     """
@@ -126,15 +126,24 @@ def save_images(data, name=""):
     4. Annotated RGB image
     for each object edited in each image
     """
+    if not os.path.isdir("foreground"):
+        os.makedirs("foreground")
+    if not os.path.isdir("background"):
+        os.makedirs("background")
+    if not os.path.isdir("original"):
+        os.makedirs("original")
+    if not os.path.isdir("annotated"):
+        os.makedirs("annotated")
+
     for i, frameData in enumerate(data):
         # datum_name = name + str(i)
         try: 
             f, b = extract_frameData(frameData)
-            _save_images(f, name + str(i) + "foreground")
-            _save_images(b, name + str(i) + "background")
-            _save_images([frameData], name + str(i) + "original")
+            _save_images(f, "foreground/" + name + str(i))
+            _save_images(b, "background/" + name + str(i))
+            _save_images([frameData], "original/" + name + str(i))
             annotated_img = get_RGB_with_annotations(frameData)
-            _save_image(annotated_img, name + str(i) + "annotated")
+            _save_image(annotated_img, "annotated/" + name + str(i))
             print("Finished processing image " + str(i))
         except Exception as e:
             print("Unable to process image " + str(i))

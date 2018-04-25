@@ -22,9 +22,10 @@ def get_test_set(root_dir):
 class DatasetFromFolder(data.Dataset):
     def __init__(self, image_dir):
         super(DatasetFromFolder, self).__init__()
-        self.photo_path = join(image_dir, "a")
-        self.sketch_path = join(image_dir, "b")
-        self.image_filenames = [x for x in listdir(self.photo_path) if is_image_file(x)]
+        self.background_path = join(image_dir, "background")
+        self.foreground_path = join(image_dir, "foreground")
+        self.label_path = join(image_dir, "original")
+        self.image_filenames = [x for x in listdir(self.label_path) if is_image_file(x)]
 
         transform_list = [transforms.ToTensor(),
                           transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
@@ -33,10 +34,14 @@ class DatasetFromFolder(data.Dataset):
 
     def __getitem__(self, index):
         # Load Image
-        input = load_img(join(self.photo_path, self.image_filenames[index]))
-        input = self.transform(input)
-        target = load_img(join(self.sketch_path, self.image_filenames[index]))
+        bg_input = load_img(join(self.background_path, self.image_filenames[index]))
+        fg_input = load_img(join(self.foreground_path, self.image_filenames[index]))
+        bg_input = self.transform(bg_input)
+        fg_input = self.transform(fg_input)
+        target = load_img(join(self.label_path, self.image_filenames[index]))
         target = self.transform(target)
+
+        input = np.concatenate([bg_input, fg_input], axis=-1)
 
         return input, target
 
@@ -49,7 +54,7 @@ def is_image_file(filename):
 
 
 def load_img(filepath):
-    img = Image.open(filepath).convert('RGB')
+    img = Image.open(filepath).convert('RGBD')
     img = img.resize((256, 256), Image.BICUBIC)
     return img
 
