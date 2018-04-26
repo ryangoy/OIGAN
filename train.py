@@ -12,6 +12,7 @@ from networks import build_generator, build_discriminator, GANLoss, print_networ
 
 import torch.backends.cudnn as cudnn
 from scipy.stats import multivariate_normal
+from load_data import get_training_set, get_test_set
 
 # Training settings
 parser = argparse.ArgumentParser(description='OIGAN PyTorch implementation')
@@ -46,9 +47,9 @@ if opt.cuda:
     torch.cuda.manual_seed(opt.seed)
 
 
-root_path = "dataset/"
-train_set = get_training_set(root_path + opt.dataset)
-test_set = get_test_set(root_path + opt.dataset)
+root_path = "data_processing/"
+train_set = get_training_set(root_path)
+test_set = get_test_set(root_path)
 training_data_loader = DataLoader(dataset=train_set, num_workers=opt.threads, batch_size=opt.batchSize, shuffle=True)
 testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batch_size=opt.testBatchSize, shuffle=False)
 
