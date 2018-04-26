@@ -114,8 +114,10 @@ def _save_images(frameData_list, name=""):
     for i, frameData in enumerate(frameData_list):
         imgRGB = frameData.imgRGB
         imgD = frameData.imgD
-        cv2.imwrite(name + str(i) + ".png", imgRGB)
-        cv2.imwrite(name + str(i) + ".png", imgD)
+        # Merge the RGB and depth image together
+        imgD = imgD[:,:,0]
+        full_img = np.dstack((imgRGB, imgD))
+        cv2.imwrite(name + "_" + str(i) + ".png", full_img)
 
 def save_images(data, name=""):
     """
@@ -149,7 +151,8 @@ def save_images(data, name=""):
             print("Unable to process image " + str(i))
             print(e)
 
+# TODO Make the RGBD into one image
 
 if __name__ == "__main__":
-    data = load_data(frameDir)
+    data = load_data(frameDir, num_samples=4)
     save_images(data)
