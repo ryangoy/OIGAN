@@ -111,11 +111,15 @@ def get_RGB_with_annotations(frameData):
   # Colors every annotation of the RGB image "uniquely"
   for i in range(0, len(frameData.annotation2D)):
     color = [rand.randint(0,255), rand.randint(0,255), rand.randint(0,255)]
+    if frameData.annotation2D[i].size == 0:
+      continue
     cv2.fillPoly(imgRGBWithAnnotations, [frameData.annotation2D[i]], color)
 
   # Labels each annotation of the RGB image
   for i in range(0, len(frameData.annotation2D)):
     data = frameData.annotation2D[i];
+    if data.size == 0:
+      continue
     centroid = np.mean(data,axis=0)
     cv2.putText(imgRGBWithAnnotations, frameData.labels2D[i], (int(centroid[0]), int(centroid[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.7, [0,0,0],2)
   return imgRGBWithAnnotations

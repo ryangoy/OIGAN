@@ -3,6 +3,7 @@
 # import random as rand
 # import numpy as np
 import os
+import os.path as osp
 # from helper import *
 from foreground import *
 from background import *
@@ -86,6 +87,8 @@ def extract_frameData(frameData):
     background_imgs = []
     num_pxl_in_image = calc_size_of_image(frameData.imgRGB)
     for label, annotation in zip(frameData.labels2D, frameData.annotation2D):
+        if annotation.size == 0:
+            continue
         num_pxl_in_annotation = calc_size_of_annotation(frameData.imgRGB, annotation)
         annot_ratio = num_pxl_in_annotation / num_pxl_in_image 
         if annot_ratio > 0.5:  # taking up half of the scene, too big
@@ -141,18 +144,21 @@ def save_images(data, name=""):
         # datum_name = name + str(i)
         try: 
             f, b = extract_frameData(frameData)
-            _save_images(f, "foreground/" + name + str(i))
-            _save_images(b, "background/" + name + str(i))
-            _save_images([frameData], "original/" + name + str(i))
+            name = name + str(i)
+            foreground_name = osp.join("./foreground", name)
+            background_name = osp.join("./background", name)
+            original_name = osp.join("./original", name)
+            annotated_name = osp.join("./annotated", name)
+            _save_images(f, foreground_name)
+            _save_images(b, background_name)
+            _save_images([frameData], original_name)
             annotated_img = get_RGB_with_annotations(frameData)
-            _save_image(annotated_img, "annotated/" + name + str(i))
+            _save_image(annotated_img, annotated_name)
             print("Finished processing image " + str(i))
         except Exception as e:
             print("Unable to process image " + str(i))
             print(e)
 
-# TODO Make the RGBD into one image
-
 if __name__ == "__main__":
-    data = load_data(frameDir, num_samples=4)
+    data = load_data(frameDir)
     save_images(data)
