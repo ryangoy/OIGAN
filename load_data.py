@@ -5,6 +5,7 @@ from os import listdir
 import torch.utils.data as data
 import torchvision.transforms as transforms
 from PIL import Image
+import numpy as np
 
 
 def get_training_set(root_dir):
@@ -54,7 +55,7 @@ def is_image_file(filename):
 
 
 def load_img(filepath):
-    img = Image.open(filepath).convert('RGBD')
+    img = Image.open(filepath).convert('RGB')
     img = img.resize((256, 256), Image.BICUBIC)
     return img
 

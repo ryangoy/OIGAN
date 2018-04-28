@@ -15,6 +15,7 @@ WHITE = [255,255,255]
 frameDir = "/home/ryan/cs/datasets/SUNRGBD/kv2/kinect2data/"
 background_labels = ["FLOOR", "FLOOR1", "BATHROOMFLOOR", "STEELBARROOF", "BASEN", "BRICKDESIGNEDWALL", "WALL", "CEILING1", "STAIRS", "BATHROOMWALL", "FLLOOR", "GLASS1", "BRICKWALL", "FENSE", "BOOTGWALL"]
 
+test_split =0.9
 # ----------------------------------------------
 # Loads all of the data from a given directory 
 # ----------------------------------------------
@@ -136,24 +137,40 @@ def save_images(data, dataset_name=""):
     4. Annotated RGB image
     for each object edited in each image
     """
-    if not os.path.isdir("foreground"):
-        os.makedirs("foreground")
-    if not os.path.isdir("background"):
-        os.makedirs("background")
-    if not os.path.isdir("original"):
-        os.makedirs("original")
-    if not os.path.isdir("annotated"):
-        os.makedirs("annotated")
+    split_index = int(test_split * len(data))
+
+    if not os.path.isdir("train/foreground"):
+        os.makedirs("train/foreground")
+    if not os.path.isdir("train/background"):
+        os.makedirs("train/background")
+    if not os.path.isdir("train/original"):
+        os.makedirs("train/original")
+    if not os.path.isdir("train/annotated"):
+        os.makedirs("train/annotated")
+    if not os.path.isdir("test/foreground"):
+        os.makedirs("test/foreground")
+    if not os.path.isdir("test/background"):
+        os.makedirs("test/background")
+    if not os.path.isdir("test/original"):
+        os.makedirs("test/original")
+    if not os.path.isdir("test/annotated"):
+        os.makedirs("test/annotated")
 
     for i, frameData in enumerate(data):
         # datum_name = name + str(i)
+
+        if i < split_index:
+            tt_dir = 'train/'
+        else:
+            tt_dir = 'test/'
+
         try: 
             f, b = extract_frameData(frameData)
             name = dataset_name + str(i)
-            foreground_name = osp.join("./foreground", name)
-            background_name = osp.join("./background", name)
-            original_name = osp.join("./original", name)
-            annotated_name = osp.join("./annotated", name)
+            foreground_name = osp.join(tt_dir + "foreground", name)
+            background_name = osp.join(tt_dir + "background", name)
+            original_name = osp.join(tt_dir + "original", name)
+            annotated_name = osp.join(tt_dir + "annotated", name)
             _save_images(f, foreground_name)
             _save_images(b, background_name)
             _save_images([frameData], original_name)
@@ -165,5 +182,5 @@ def save_images(data, dataset_name=""):
             print(e)
 
 if __name__ == "__main__":
-    data = load_data(frameDir)
+    data = load_data(frameDir, num_samples=None)
     save_images(data)
