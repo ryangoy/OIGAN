@@ -5,19 +5,21 @@ import numpy as np
 from copy import deepcopy as copy
 
 class FrameData:
-    def __init__(self, imgRGB,imgD,annotation2D,labels2D):
+    def __init__(self, imgRGB,imgD,annotation2D,labels2D, extra_info={}):
         self.imgRGB = imgRGB
         self.imgD = imgD
         self.annotation2D = annotation2D
         self.labels2D = labels2D
+        self.extra_info = extra_info
 
     def copy(self):
         new_imgRGB = copy(self.imgRGB)
         new_imgD = copy(self.imgD)
         new_annotation2D = copy(self.annotation2D)
         new_labels2D = copy(self.labels2D)
+        extra_info = copy(self.extra_info)
 
-        return FrameData(new_imgRGB, new_imgD, new_annotation2D, new_labels2D)
+        return FrameData(new_imgRGB, new_imgD, new_annotation2D, new_labels2D, extra_info)
 
     def copy_size(self):
         # copys the size over and zeros all the image
@@ -26,8 +28,9 @@ class FrameData:
         new_imgD = np.zeros(self.imgD.shape)
         new_annotation2D = copy(self.annotation2D)
         new_labels2D = copy(self.labels2D)
+        extra_info = copy(self.extra_info)
 
-        return FrameData(new_imgRGB, new_imgD, new_annotation2D, new_labels2D)
+        return FrameData(new_imgRGB, new_imgD, new_annotation2D, new_labels2D, extra_info)
         
 def readFrame( framePath, bfx ):
     #read RGB information to numpy array    

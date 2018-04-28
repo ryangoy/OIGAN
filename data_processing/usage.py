@@ -4,6 +4,7 @@
 # import numpy as np
 import os
 import os.path as osp
+import json
 # from helper import *
 from foreground import *
 from background import *
@@ -122,7 +123,11 @@ def _save_images(frameData_list, name=""):
         full_img = np.dstack((imgRGB, imgD))
         cv2.imwrite(name + "_" + str(i) + ".png", full_img)
 
-def save_images(data, name=""):
+        if len(frameData.extra_info) != 0:
+            with open(name + "_" + str(i) + "_bounding_box.json", "w") as fp:
+                json.dump(frameData.extra_info, fp)
+
+def save_images(data, dataset_name=""):
     """
     Save everything about all images in data, including
     1. Original RGB, D image
@@ -144,7 +149,7 @@ def save_images(data, name=""):
         # datum_name = name + str(i)
         try: 
             f, b = extract_frameData(frameData)
-            name = name + str(i)
+            name = dataset_name + str(i)
             foreground_name = osp.join("./foreground", name)
             background_name = osp.join("./background", name)
             original_name = osp.join("./original", name)
