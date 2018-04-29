@@ -13,6 +13,7 @@ from networks import build_generator, build_discriminator, GANLoss, print_networ
 import torch.backends.cudnn as cudnn
 from scipy.stats import multivariate_normal
 from load_data import get_training_set, get_test_set
+import numpy as np
 
 # Training settings
 parser = argparse.ArgumentParser(description='OIGAN PyTorch implementation')
@@ -20,8 +21,8 @@ parser.add_argument('--dataset', default='sunrgbd', help='type of dataset')
 parser.add_argument('--batchSize', type=int, default=1, help='training batch size')
 parser.add_argument('--testBatchSize', type=int, default=1, help='testing batch size')
 parser.add_argument('--nEpochs', type=int, default=200, help='number of epochs to train for')
-parser.add_argument('--input_channels', type=int, default=5, help='input image channels')
-parser.add_argument('--output_channels', type=int, default=3, help='output image channels')
+parser.add_argument('--input_channels', type=int, default=8, help='input image channels')
+parser.add_argument('--output_channels', type=int, default=4, help='output image channels')
 parser.add_argument('--num_gen_filters', type=int, default=64, help='generator filters in first conv layer')
 parser.add_argument('--num_dis_filters', type=int, default=64, help='discriminator filters in first conv layer')
 parser.add_argument('--num_gen_ds', type=int, default=3, help='number of downsample operations in generator')
@@ -29,10 +30,10 @@ parser.add_argument('--num_dis_ds', type=int, default=3, help='number of downsam
 parser.add_argument('--num_gen_blocks', type=int, default=8, help='number of resnet blocks in generator')
 parser.add_argument('--lr', type=float, default=0.0002, help='Learning Rate. Default=0.002')
 parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. default=0.5')
-parser.add_argument('--cuda', action='store_true', help='use cuda?')
+parser.add_argument('--cuda', type=bool, default=True, help='use cuda?')
 parser.add_argument('--threads', type=int, default=4, help='number of threads for data loader to use')
 parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123')
-parser.add_argument('--lambda', type=int, default=10, help='weight on L1 term in objective')
+parser.add_argument('--lamb', type=int, default=10, help='weight on L1 term in objective')
 opt = parser.parse_args()
 
 print(opt)
@@ -67,10 +68,13 @@ class SLLoss(nn.Module):
     def get_weighting_tensor(self, pred, coords):
         weightings = []
         for coord in coords:
-            center = [(coord[0]+coord[2])/2, (coord[1]+coord[3])/2]
-            half_length = [(coord[2]-coord[0])/2, (coord[3]-coord[1])/2]
-            x = np.linspace(0, pred.shape[1], pred.shape[2])
-            weightings.append(multivariate_normal(x, mean=center, cov=half_length))
+            center = coord[:2]
+            half_length = coord[2:]
+            m = np.mgrid[0:pred.shape[2]:1, 0:pred.shape[3]:1]
+            m = m.T
+          
+            cov = [[half_length.cpu().numpy()[0], 0],[0, half_length.cpu().numpy()[1]]]
+            weightings.append(multivariate_normal.pdf(m, mean=center.cpu().numpy(), cov=cov))
 
         
         target_tensor = torch.from_numpy(np.array(weightings))
@@ -82,7 +86,7 @@ class SLLoss(nn.Module):
     # coords are of shape [batch, 4]
     def __call__(self, pred, label, coords):
         weightings = self.get_weighting_tensor(pred, coords)
-        return self.loss(weightings*pred, weightings*label)
+        return self.loss((weightings*pred), (weightings*label).double())
 
 
 
@@ -93,7 +97,8 @@ def train(epoch):
         real_a.data.resize_(real_a_cpu.size()).copy_(real_a_cpu)
         real_b.data.resize_(real_b_cpu.size()).copy_(real_b_cpu)
         coords.data.resize_(coords_cpu.size()).copy_(coords_cpu)
-        fake_b = netG(real_a)
+
+        fake_b = G(real_a)
 
         ############################
         # (1) Update D network: maximize log(D(x,y)) + log(1 - D(x,G(x)))
@@ -126,7 +131,7 @@ def train(epoch):
         optimizerG.zero_grad()
         # First, G(A) should fake the discriminator
         fake_ab = torch.cat((real_a, fake_b), 1)
-        pred_fake = netD.forward(fake_ab)
+        pred_fake = D.forward(fake_ab)
         loss_g_gan = criterionGAN(pred_fake, True)
 
          # Second, G(A) = B
@@ -196,15 +201,16 @@ real_a = torch.FloatTensor(opt.batchSize, opt.input_channels, 256, 256)
 real_b = torch.FloatTensor(opt.batchSize, opt.output_channels, 256, 256)
 coords = torch.FloatTensor(opt.batchSize, 4)
 
-
 if opt.cuda:
     D = D.cuda()
     G = G.cuda()
     criterionGAN = criterionGAN.cuda()
+    criterionSLL = criterionSLL.cuda()
     criterionL1 = criterionL1.cuda()
     criterionMSE = criterionMSE.cuda()
     real_a = real_a.cuda()
     real_b = real_b.cuda()
+    coords = coords.cuda()
 
 real_a = Variable(real_a)
 real_b = Variable(real_b)

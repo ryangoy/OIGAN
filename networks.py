@@ -77,7 +77,7 @@ class Generator(nn.Module):
         self.model = self.build_resnet_generator(num_filters, use_dropout, input_channels, output_channels, num_downsample, num_blocks, norm_fn)
 
     # Constructs network using resnet blocks.
-    def build_resnet_generator(self, num_filters=64, use_dropout=True, input_channels=4, output_channels=3, num_downsample=2, num_blocks=6, norm_fn=nn.BatchNorm2d):
+    def build_resnet_generator(self, num_filters=64, use_dropout=True, input_channels=8, output_channels=4, num_downsample=2, num_blocks=6, norm_fn=nn.BatchNorm2d):
         layers = []
         layers = [nn.Conv2d(input_channels, num_filters, kernel_size=7, padding=3), norm_fn(num_filters, affine=True), nn.ReLU(True)]
 
@@ -96,7 +96,7 @@ class Generator(nn.Module):
             layers += [nn.ConvTranspose2d(k*num_filters, int(k*num_filters/2), kernel_size=3, stride=2, padding=1, output_padding=1), 
                       norm_fn(int(k*num_filters/2), affine=True), nn.ReLU(True)]
 
-        layers += [nn.Conv2d(num_filters, 3, kernel_size=7, padding=3)]
+        layers += [nn.Conv2d(num_filters, output_channels, kernel_size=7, padding=3)]
         layers += [nn.Tanh()]
 
         return nn.Sequential(*layers)
@@ -118,7 +118,8 @@ class ResnetBlock(nn.Module):
         if use_dropout:
             layers += [nn.Dropout(0.5)]
         layers += [nn.ReLU(inplace=True), nn.Conv2d(dim, dim, kernel_size=3, padding=1), norm_fn(dim, affine=True)]
-        return layers
+
+        return nn.Sequential(*layers)
 
     def forward(self, x):
         out = x + self.resnet_block(x)

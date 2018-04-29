@@ -6,6 +6,7 @@ import torch.utils.data as data
 import torchvision.transforms as transforms
 from PIL import Image
 import numpy as np
+import json
 
 
 def get_training_set(root_dir):
@@ -41,10 +42,12 @@ class DatasetFromFolder(data.Dataset):
         fg_input = self.transform(fg_input)
         target = load_img(join(self.label_path, self.image_filenames[index]))
         target = self.transform(target)
+        coords = json.load(open(join(self.foreground_path, self.image_filenames[index][:-4] + '_bounding_box.json')))
+        coord_data = np.array(coords['center'] + coords['size'])
 
-        input = np.concatenate([bg_input, fg_input], axis=-1)
+        input = np.concatenate([bg_input, fg_input], axis=0)
 
-        return input, target
+        return input, target, coord_data
 
     def __len__(self):
         return len(self.image_filenames)
@@ -55,7 +58,7 @@ def is_image_file(filename):
 
 
 def load_img(filepath):
-    img = Image.open(filepath).convert('RGB')
+    img = Image.open(filepath).convert('RGBA')
     img = img.resize((256, 256), Image.BICUBIC)
     return img
 
