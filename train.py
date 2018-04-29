@@ -8,10 +8,10 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-from networks import build_generator, build_discriminator, GANLoss, print_network
+from networks import build_generator, build_discriminator, GANLoss, SLLoss, print_network
 
 import torch.backends.cudnn as cudnn
-from scipy.stats import multivariate_normal
+
 from load_data import get_training_set, get_test_set
 import numpy as np
 
@@ -55,38 +55,6 @@ training_data_loader = DataLoader(dataset=train_set, num_workers=opt.threads, ba
 testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batch_size=opt.testBatchSize, shuffle=False)
 
 
-class SLLoss(nn.Module):
-    def __init__(self, tensor=torch.FloatTensor, use_lsgan=True):
-        super(SLLoss, self).__init__()
-
-        self.Tensor = tensor
-        if use_lsgan:
-            self.loss = nn.MSELoss()
-        else:
-            self.loss = nn.BCELoss()
-
-    def get_weighting_tensor(self, pred, coords):
-        weightings = []
-        for coord in coords:
-            center = coord[:2]
-            half_length = coord[2:]
-            m = np.mgrid[0:pred.shape[2]:1, 0:pred.shape[3]:1]
-            m = m.T
-          
-            cov = [[half_length.cpu().numpy()[0], 0],[0, half_length.cpu().numpy()[1]]]
-            weightings.append(multivariate_normal.pdf(m, mean=center.cpu().numpy(), cov=cov))
-
-        
-        target_tensor = torch.from_numpy(np.array(weightings))
-        target_tensor = Variable(target_tensor, requires_grad=False)
-
-        return target_tensor
-
-    # pred and label are shape [batch, height, width, channels]
-    # coords are of shape [batch, 4]
-    def __call__(self, pred, label, coords):
-        weightings = self.get_weighting_tensor(pred, coords)
-        return self.loss((weightings*pred), (weightings*label).double())
 
 
 

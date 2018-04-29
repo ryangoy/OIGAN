@@ -43,7 +43,7 @@ class DatasetFromFolder(data.Dataset):
         target = load_img(join(self.label_path, self.image_filenames[index]))
         target = self.transform(target)
         coords = json.load(open(join(self.foreground_path, self.image_filenames[index][:-4] + '_bounding_box.json')))
-        coord_data = np.array(coords['center'] + coords['size'])
+        coord_data = np.array(coords['center'] + coords['size']).astype(float)
 
         input = np.concatenate([bg_input, fg_input], axis=0)
 

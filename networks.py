@@ -2,9 +2,46 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import numpy as np
+from scipy.stats import multivariate_normal
 
 # Adapted from https://github.com/mrzhu-cool/pix2pix-pytorch/blob/master/networks.py
 
+
+
+class SLLoss(nn.Module):
+    def __init__(self, tensor=torch.FloatTensor, use_lsgan=True):
+        super(SLLoss, self).__init__()
+
+        self.Tensor = tensor
+        if use_lsgan:
+            self.loss = nn.MSELoss()
+        else:
+            self.loss = nn.BCELoss()
+
+    def get_weighting_tensor(self, pred, coords):
+        weightings = []
+        for coord in coords:
+            center = coord[:2]
+            half_length = coord[2:]
+            m = np.mgrid[0:pred.shape[2]:1, 0:pred.shape[3]:1]
+            m = m.T
+          
+            cov = [[half_length.cpu().numpy()[0], 0],[0, half_length.cpu().numpy()[1]]]
+            weightings.append(multivariate_normal.pdf(m, mean=center.cpu().numpy(), cov=cov).astype(float))
+
+        
+        target_tensor = torch.from_numpy(np.array(weightings))
+        print(target_tensor)
+        target_tensor = Variable(target_tensor, requires_grad=False)
+
+        return target_tensor
+
+    # pred and label are shape [batch, height, width, channels]
+    # coords are of shape [batch, 4]
+    def __call__(self, pred, label, coords):
+        weightings = self.get_weighting_tensor(pred, coords)
+        
+        return self.loss((weightings*pred), (weightings*label).double())
 
 class GANLoss(nn.Module):
     def __init__(self, use_lsgan=True, target_real_label=1.0, target_fake_label=0.0,
