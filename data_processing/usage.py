@@ -29,13 +29,16 @@ def load_data(frameDir, num_samples=None, start_index=49):
     :param single: If True, only pulls one image out
     :return: list of frameData objects
     """
-    directory = os.fsencode(frameDir)
+    #directory = os.fsencode(frameDir)
+    directory = frameDir
     files = []
     for file in os.listdir(directory): # includes .DS_Store not . or ..
-        filename = os.fsdecode(file)
+        #filename = os.fsdecode(file)
+        filename = file
         if filename.endswith("resize") or filename.startswith("NYU"): 
             new_file = os.path.join(directory, file)
-            files.append(os.fsdecode(new_file))
+            #files.append(os.fsdecode(new_file))
+            files.append(new_file)
     data = []                                         
     if num_samples is not None:
         files = files[start_index:start_index+num_samples]
@@ -92,7 +95,7 @@ def extract_frameData(frameData):
         if annotation.size == 0:
             continue
         num_pxl_in_annotation = calc_size_of_annotation(frameData.imgRGB, annotation)
-        annot_ratio = num_pxl_in_annotation / num_pxl_in_image 
+        annot_ratio = 1.0 * num_pxl_in_annotation / num_pxl_in_image 
         if annot_ratio > 0.5:  # taking up half of the scene, too big
             continue
         if annot_ratio < 0.02:  # too small 
