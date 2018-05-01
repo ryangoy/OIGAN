@@ -6,13 +6,15 @@ import torch
 from torch.autograd import Variable
 import torchvision.transforms as transforms
 
-from util import is_image_file, load_img, save_img
+from load_data import is_image_file, load_img, save_img
 import numpy as np
+from os import listdir
+from os.path import join
 
 # Testing settings
 parser = argparse.ArgumentParser(description='OIGAN')
-parser.add_argument('--model', type=str, default='checkpoint/facades/netG_model_epoch_200.pth', help='model file to use')
-parser.add_argument('--cuda', action='store_true', help='use cuda')
+parser.add_argument('--model', type=str, default='checkpoint/sunrgbd/netG_model_epoch_150.pth', help='model file to use')
+parser.add_argument('--cuda', type=bool, default='True', help='use cuda')
 opt = parser.parse_args()
 print(opt)
 
@@ -33,7 +35,7 @@ for image_name in image_filenames:
     bg_img = load_img(bg_image_dir + image_name)
     fg_img = transform(fg_img)
     bg_img = transform(bg_img)
-    img = np.concatenate([bg_img, fg_img])
+    img = torch.cat([bg_img, fg_img], 1)
     input = Variable(img, volatile=True).view(1, -1, 256, 256)
 
     if opt.cuda:
@@ -43,6 +45,6 @@ for image_name in image_filenames:
     out = netG(input)
     out = out.cpu()
     out_img = out.data[0]
-    if not os.path.exists(os.path.join("result", opt.dataset)):
-        os.makedirs(os.path.join("result", opt.dataset))
-    save_img(out_img, "result/{}/{}".format(opt.dataset, image_name))
+    if not os.path.exists("result"):
+        os.makedirs("result")
+    save_img(out_img[:3], "result/{}".format(image_name))
