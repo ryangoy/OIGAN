@@ -6,8 +6,6 @@ from scipy.stats import multivariate_normal
 
 # Adapted from https://github.com/mrzhu-cool/pix2pix-pytorch/blob/master/networks.py
 
-
-
 class SLLoss(nn.Module):
     def __init__(self, tensor=torch.FloatTensor, use_lsgan=True):
         super(SLLoss, self).__init__()
@@ -31,7 +29,6 @@ class SLLoss(nn.Module):
 
         
         target_tensor = torch.from_numpy(np.array(weightings))
-        print(target_tensor)
         target_tensor = Variable(target_tensor, requires_grad=False)
 
         return target_tensor
@@ -40,8 +37,8 @@ class SLLoss(nn.Module):
     # coords are of shape [batch, 4]
     def __call__(self, pred, label, coords):
         weightings = self.get_weighting_tensor(pred, coords)
-        
-        return self.loss((weightings*pred), (weightings*label).double())
+        #return self.loss((weightings*pred), (weightings*label))
+        return self.loss((weightings.cuda().float()*pred), (weightings.cuda().float()*label))
 
 class GANLoss(nn.Module):
     def __init__(self, use_lsgan=True, target_real_label=1.0, target_fake_label=0.0,

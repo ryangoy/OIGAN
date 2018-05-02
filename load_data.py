@@ -1,6 +1,7 @@
 from os.path import join
 
 from os import listdir
+import os
 
 import torch.utils.data as data
 import torchvision.transforms as transforms
@@ -27,8 +28,7 @@ class DatasetFromFolder(data.Dataset):
         self.background_path = join(image_dir, "background")
         self.foreground_path = join(image_dir, "foreground")
         self.label_path = join(image_dir, "original")
-        self.image_filenames = [x for x in listdir(self.label_path) if is_image_file(x)]
-
+        self.image_filenames = [x for x in listdir(self.background_path) if (is_image_file(x) and os.path.isfile(join(self.foreground_path, x)) and os.path.isfile(join(self.label_path, x)))]
         transform_list = [transforms.ToTensor(),
                           transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
 

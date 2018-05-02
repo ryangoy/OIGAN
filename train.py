@@ -139,9 +139,9 @@ def train(epoch):
         loss_g.backward()
 
         optimizerG.step()
-
-        print("===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
-            epoch, iteration, len(training_data_loader), loss_d.data[0], loss_g.data[0]))
+        if iteration % 100 == 0:
+            print("===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
+                epoch, iteration, len(training_data_loader), loss_d.data[0], loss_g.data[0]))
 
 def validate():
     avg_psnr = 0
@@ -151,7 +151,7 @@ def validate():
             input = input.cuda()
             target = target.cuda()
 
-        prediction = netG(input)
+        prediction = G(input)
         mse = criterionMSE(prediction, target)
         psnr = 10 * log10(1 / mse.data[0])
         avg_psnr += psnr
@@ -164,8 +164,8 @@ def checkpoint(epoch):
         os.mkdir(os.path.join("checkpoint", opt.dataset))
     net_g_model_out_path = "checkpoint/{}/netG_model_epoch_{}.pth".format(opt.dataset, epoch)
     net_d_model_out_path = "checkpoint/{}/netD_model_epoch_{}.pth".format(opt.dataset, epoch)
-    torch.save(netG, net_g_model_out_path)
-    torch.save(netD, net_d_model_out_path)
+    torch.save(G, net_g_model_out_path)
+    torch.save(D, net_d_model_out_path)
     print("Checkpoint saved to {}".format("checkpoint" + opt.dataset))
 
 # Load data
