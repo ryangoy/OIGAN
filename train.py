@@ -64,12 +64,21 @@ testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batc
 
 def train(epoch):
     for iteration, batch in enumerate(training_data_loader, 1):
-        num_steps = epoch * len(training_data_loader) / training_data_loader.batch_size 
+        num_steps = epoch * training_data_loader.batch_size / len(training_data_loader) 
 
         # forward
         real_a_cpu, real_b_cpu, coords_cpu = batch[0], batch[1], batch[2]
-        writer.add_image("Input Image A",  real_a_cpu, num_steps)
-        writer.add_image("Input Image B",  real_b_cpu, num_steps)
+
+        real_a_cpu_foreground = real_a_cpu[0][0,::] # TODO
+        real_a_cpu_background = real_a_cpu[0][0,::] # TODO
+        writer.add_image("Input Image A foreground",  real_a_cpu_foreground, num_steps)
+        writer.add_image("Input Image A background",  real_a_cpu_background, num_steps)
+        real_b_cpu_foreground = real_b_cpu[0][0,::]
+        real_b_cpu_background = real_b_cpu[0][0,::]
+        writer.add_image("Input Image B foreground",  real_b_cpu_foreground, num_steps)
+        writer.add_image("Input Image B background",  real_b_cpu_background, num_steps)
+
+
         real_a.data.resize_(real_a_cpu.size()).copy_(real_a_cpu)
         real_b.data.resize_(real_b_cpu.size()).copy_(real_b_cpu)
         coords.data.resize_(coords_cpu.size()).copy_(coords_cpu)
