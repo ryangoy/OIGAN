@@ -15,6 +15,10 @@ import torch.backends.cudnn as cudnn
 from load_data import get_training_set, get_test_set
 import numpy as np
 
+from tensorboardX import SummaryWriter
+writer = SummaryWriter()
+
+
 # Training settings
 parser = argparse.ArgumentParser(description='OIGAN PyTorch implementation')
 parser.add_argument('--dataset', default='sunrgbd', help='type of dataset')
@@ -60,11 +64,17 @@ testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batc
 
 def train(epoch):
     for iteration, batch in enumerate(training_data_loader, 1):
+        num_steps = epoch * len(training_data_loader) / training_data_loader.batch_size 
+
         # forward
         real_a_cpu, real_b_cpu, coords_cpu = batch[0], batch[1], batch[2]
+        writer.add_image("Input Image A",  real_a_cpu, num_steps)
+        writer.add_image("Input Image B",  real_b_cpu, num_steps)
         real_a.data.resize_(real_a_cpu.size()).copy_(real_a_cpu)
         real_b.data.resize_(real_b_cpu.size()).copy_(real_b_cpu)
         coords.data.resize_(coords_cpu.size()).copy_(coords_cpu)
+
+
 
         fake_b = G(real_a)
 
@@ -78,16 +88,20 @@ def train(epoch):
         fake_ab = torch.cat((real_a, fake_b), 1)
         pred_fake = D.forward(fake_ab.detach())
         loss_d_fake = criterionGAN(pred_fake, False)
+        writer.add_scalar("loss_discriminator_fake", loss_d_fake, num_steps) 
 
 
         # train with real
         real_ab = torch.cat((real_a, real_b), 1)
         pred_real = D.forward(real_ab)
+        #writer.add_scalar("discriminator_entropy", entropy(pred_real), num_steps)   TODO
         loss_d_real = criterionGAN(pred_real, True)
+        writer.add_scalar("loss_discriminator_real", loss_d_real, num_steps) 
 
         
         # Combined loss
         loss_d = (loss_d_fake + loss_d_real) * 0.5
+        writer.add_scalar("loss_discriminator", loss_d, num_steps) 
 
         loss_d.backward()
        
@@ -100,13 +114,18 @@ def train(epoch):
         # First, G(A) should fake the discriminator
         fake_ab = torch.cat((real_a, fake_b), 1)
         pred_fake = D.forward(fake_ab)
+        writer.add_image("Generated Image",  pred_fake[0], num_steps)
         loss_g_gan = criterionGAN(pred_fake, True)
+        writer.add_scalar("loss_generator_gan", loss_g_gan, num_steps) 
 
          # Second, G(A) = B
         loss_g_l1 = criterionL1(fake_b, real_b) * opt.lamb
+        writer.add_scalar("loss_generator_l1", loss_g_l1, num_steps) 
         loss_g_sl = criterionSLL(fake_b, real_b, coords)
+        writer.add_scalar("loss_generator_sl", loss_g_sl, num_steps) 
         
         loss_g = loss_g_gan + loss_g_l1 + loss_g_sl
+        writer.add_scalar("loss_generator", loss_g, num_steps) 
         
         loss_g.backward()
 
