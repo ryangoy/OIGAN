@@ -59,33 +59,46 @@ training_data_loader = DataLoader(dataset=train_set, num_workers=opt.threads, ba
 testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batch_size=opt.testBatchSize, shuffle=False)
 
 
+def add_images(imgs, writer, name, num_steps):
+    imgs = imgs.clone()
+    _, C, _, _ = imgs.shape
+    img = imgs[0]
+    if C == 3:
+        writer.add_image(name, img, num_steps)
 
+    if C == 4:
+        rgb, d = np.array_split(img, [3], axis=0)
+        writer.add_image(name + "RGB", rgb, num_steps)
+        writer.add_image(name + "D", d, num_steps)
+
+    if C == 8:
+        fore_rgb, fore_d, back_rgb, back_d = np.array_split(img,  [3,4,7],axis=0)
+        writer.add_image(name + "foreground RGB", fore_rgb, num_steps)
+        writer.add_image(name + "foreground D", fore_d, num_steps)
+        writer.add_image(name + "background RGB", back_rgb, num_steps)
+        writer.add_image(name + "background D", back_d, num_steps)
+        
 
 
 def train(epoch):
     for iteration, batch in enumerate(training_data_loader, 1):
-        num_steps = epoch * training_data_loader.batch_size / len(training_data_loader) 
+        num_iter_per_epoch = len(training_data_loader) / training_data_loader.batch_size
+        num_steps = num_iter_per_epoch * (epoch-1) + iteration
+        num_steps = int(num_steps)
+        print(num_steps)
 
         # forward
         real_a_cpu, real_b_cpu, coords_cpu = batch[0], batch[1], batch[2]
 
-        real_a_cpu_foreground = real_a_cpu[0][0,::] # TODO
-        real_a_cpu_background = real_a_cpu[0][0,::] # TODO
-        writer.add_image("Input Image A foreground",  real_a_cpu_foreground, num_steps)
-        writer.add_image("Input Image A background",  real_a_cpu_background, num_steps)
-        real_b_cpu_foreground = real_b_cpu[0][0,::]
-        real_b_cpu_background = real_b_cpu[0][0,::]
-        writer.add_image("Input Image B foreground",  real_b_cpu_foreground, num_steps)
-        writer.add_image("Input Image B background",  real_b_cpu_background, num_steps)
-
+        add_images(real_a_cpu, writer, "Input Image A", num_steps)
+        add_images(real_b_cpu, writer, "Input Image B", num_steps)
 
         real_a.data.resize_(real_a_cpu.size()).copy_(real_a_cpu)
         real_b.data.resize_(real_b_cpu.size()).copy_(real_b_cpu)
         coords.data.resize_(coords_cpu.size()).copy_(coords_cpu)
 
-
-
         fake_b = G(real_a)
+        add_images(fake_b, writer, "Fake Image", num_steps)
 
         ############################
         # (1) Update D network: maximize log(D(x,y)) + log(1 - D(x,G(x)))
@@ -123,7 +136,6 @@ def train(epoch):
         # First, G(A) should fake the discriminator
         fake_ab = torch.cat((real_a, fake_b), 1)
         pred_fake = D.forward(fake_ab)
-        writer.add_image("Generated Image",  pred_fake[0], num_steps)
         loss_g_gan = criterionGAN(pred_fake, True)
         writer.add_scalar("loss_generator_gan", loss_g_gan, num_steps) 
 
