@@ -62,12 +62,12 @@ testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batc
 def add_images(imgs, writer, name, num_steps):
     imgs = imgs.clone()
     _, C, _, _ = imgs.shape
-    img = imgs[0]
+    img = imgs[0].cpu()
     if C == 3:
         writer.add_image(name, img, num_steps)
 
     if C == 4:
-        rgb, d = np.array_split(img, [3], axis=0)
+        rgb, d = torch.split(img, [3,1], dim=0)
         writer.add_image(name + "RGB", rgb, num_steps)
         writer.add_image(name + "D", d, num_steps)
 
@@ -85,7 +85,6 @@ def train(epoch):
         num_iter_per_epoch = len(training_data_loader) / training_data_loader.batch_size
         num_steps = num_iter_per_epoch * (epoch-1) + iteration
         num_steps = int(num_steps)
-        print(num_steps)
 
         # forward
         real_a_cpu, real_b_cpu, coords_cpu = batch[0], batch[1], batch[2]
