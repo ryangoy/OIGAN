@@ -24,8 +24,8 @@ class SLLoss(nn.Module):
             m = np.mgrid[0:pred.shape[2]:1, 0:pred.shape[3]:1]
             m = m.T
           
-            cov = [[half_length.cpu().numpy()[0], 0],[0, half_length.cpu().numpy()[1]]]
-            weightings.append(multivariate_normal.pdf(m, mean=center.cpu().numpy(), cov=cov).astype(float))
+            cov = [[half_length.cpu().data.numpy()[0], 0],[0, half_length.cpu().data.numpy()[1]]]
+            weightings.append(multivariate_normal.pdf(m, mean=center.cpu().data.numpy(), cov=cov).astype(float))
 
         
         target_tensor = torch.from_numpy(np.array(weightings))
