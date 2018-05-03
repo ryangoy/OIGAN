@@ -37,7 +37,11 @@ parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. de
 parser.add_argument('--cuda', type=bool, default=True, help='use cuda?')
 parser.add_argument('--threads', type=int, default=4, help='number of threads for data loader to use')
 parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123')
-parser.add_argument('--lamb', type=int, default=10, help='weight on L1 term in objective')
+parser.add_argument('--lamb', type=int, default=10, help='DEPRECIATED: weight on L1 term in objective')
+
+parser.add_argument('--l1_bonus', type=int, default=10, help='weight on L1 term in objective')
+parser.add_argument('--sl_bonus', type=int, default=1, help='weight on SLterm in objective')
+parser.add_argument('--gan_bonus', type=int, default=1, help='weight on gan term in objective')
 opt = parser.parse_args()
 
 print(opt)
@@ -135,13 +139,13 @@ def train(epoch):
         # First, G(A) should fake the discriminator
         fake_ab = torch.cat((real_a, fake_b), 1)
         pred_fake = D.forward(fake_ab)
-        loss_g_gan = criterionGAN(pred_fake, True)
+        loss_g_gan = criterionGAN(pred_fake, True) * opt.gan_bonus
         writer.add_scalar("loss_generator_gan", loss_g_gan, num_steps) 
 
          # Second, G(A) = B
-        loss_g_l1 = criterionL1(fake_b, real_b) * opt.lamb
+        loss_g_l1 = criterionL1(fake_b, real_b) * opt.l1_bonus
         writer.add_scalar("loss_generator_l1", loss_g_l1, num_steps) 
-        loss_g_sl = criterionSLL(fake_b, real_b, coords)
+        loss_g_sl = criterionSLL(fake_b, real_b, coords) * opt.sl_bonus
         writer.add_scalar("loss_generator_sl", loss_g_sl, num_steps) 
         
         loss_g = loss_g_gan + loss_g_l1 + loss_g_sl
