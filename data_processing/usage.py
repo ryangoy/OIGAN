@@ -4,10 +4,15 @@
 # import numpy as np
 import os
 import os.path as osp
+from os.path import join
 import json
 # from helper import *
 from foreground import *
 from background import *
+import shutil, errno
+from random import shuffle
+
+
 # import os.path as osp
 
 BLACK = [0,0,0]
@@ -15,12 +20,21 @@ WHITE = [255,255,255]
 frameDir = "/home/ryan/cs/datasets/SUNRGBD/kv2/kinect2data/"
 background_labels = ["FLOOR", "FLOOR1", "BATHROOMFLOOR", "STEELBARROOF", "BASEN", "BRICKDESIGNEDWALL", "WALL", "CEILING1", "STAIRS", "BATHROOMWALL", "FLLOOR", "GLASS1", "BRICKWALL", "FENSE", "BOOTGWALL"]
 
-test_split =0.9
+test_split =0.95
 # ----------------------------------------------
 # Loads all of the data from a given directory 
 # ----------------------------------------------
 
 #frameDir = "/Users/jeff/Documents/cs280/project/SUNRGB/SUNRGBD/kv1/NYUdata/"
+
+# https://stackoverflow.com/questions/1994488/copy-file-or-directories-recursively-in-python
+def copy_dir(src, dst):
+    try:
+        shutil.copytree(src, dst)
+    except OSError as exc: # python >2.5
+        if exc.errno == errno.ENOTDIR:
+            shutil.copy(src, dst)
+        else: raise
 
 def load_data(frameDir, num_samples=None, start_index=49):
     """
@@ -142,22 +156,11 @@ def save_images(data, dataset_name=""):
     """
     split_index = int(test_split * len(data))
 
-    if not os.path.isdir("train/foreground"):
-        os.makedirs("train/foreground")
-    if not os.path.isdir("train/background"):
-        os.makedirs("train/background")
-    if not os.path.isdir("train/original"):
-        os.makedirs("train/original")
-    if not os.path.isdir("train/annotated"):
-        os.makedirs("train/annotated")
-    if not os.path.isdir("test/foreground"):
-        os.makedirs("test/foreground")
-    if not os.path.isdir("test/background"):
-        os.makedirs("test/background")
-    if not os.path.isdir("test/original"):
-        os.makedirs("test/original")
-    if not os.path.isdir("test/annotated"):
-        os.makedirs("test/annotated")
+    for d in ['train', 'validation']:
+        for f in ['foreground', 'background', 'original', 'annotated']:
+            if not os.path.isdir(join(d, f)):
+                os.makedirs(join(d, f))
+
 
     for i, frameData in enumerate(data):
         # datum_name = name + str(i)
@@ -165,7 +168,7 @@ def save_images(data, dataset_name=""):
         if i < split_index:
             tt_dir = 'train/'
         else:
-            tt_dir = 'test/'
+            tt_dir = 'validation/'
 
         try: 
             f, b = extract_frameData(frameData)
@@ -183,6 +186,14 @@ def save_images(data, dataset_name=""):
         except Exception as e:
             print("Unable to process image " + str(i))
             print(e)
+
+    copy_dir('validation', 'test')
+    os.rename('test/original', 'test/background')
+
+    original_names = os.listdir('test/background')
+    shuffle(original_names)
+    for i, img in enumerate(os.listdir('test/background')):
+        shutil.move(join('test/background', img), join('test/background', original_names[i]))
 
 if __name__ == "__main__":
     data = load_data(frameDir, num_samples=None)

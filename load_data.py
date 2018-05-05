@@ -21,6 +21,11 @@ def get_test_set(root_dir):
 
     return DatasetFromFolder(test_dir)
 
+def get_val_set(root_dir):
+    test_dir = join(root_dir, "validation")
+
+    return DatasetFromFolder(test_dir)
+
 
 class DatasetFromFolder(data.Dataset):
     def __init__(self, image_dir):

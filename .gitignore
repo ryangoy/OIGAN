@@ -6,7 +6,11 @@ __pycache__/
 .idea/
 *.jpg
 *.jpeg
-data_processing/
+*.pyc
+checkpoint/
+train/
+test/
+validation/
 
 # C extensions
 *.so
