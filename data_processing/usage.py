@@ -156,39 +156,39 @@ def save_images(data, dataset_name=""):
     """
     split_index = int(test_split * len(data))
 
-    # for d in ['train', 'validation']:
-    #     for f in ['foreground', 'background', 'original', 'annotated']:
-    #         if not os.path.isdir(join(d, f)):
-    #             os.makedirs(join(d, f))
+    for d in ['train', 'validation']:
+        for f in ['foreground', 'background', 'original', 'annotated']:
+            if not os.path.isdir(join(d, f)):
+                os.makedirs(join(d, f))
 
 
-    # for i, frameData in enumerate(data):
-    #     # datum_name = name + str(i)
+    for i, frameData in enumerate(data):
+        # datum_name = name + str(i)
 
-    #     if i < split_index:
-    #         tt_dir = 'train/'
-    #     else:
-    #         tt_dir = 'validation/'
+        if i < split_index:
+            tt_dir = 'train/'
+        else:
+            tt_dir = 'validation/'
 
-    #     try: 
-    #         f, b = extract_frameData(frameData)
-    #         name = dataset_name + str(i)
-    #         foreground_name = osp.join(tt_dir + "foreground", name)
-    #         background_name = osp.join(tt_dir + "background", name)
-    #         original_name = osp.join(tt_dir + "original", name)
-    #         annotated_name = osp.join(tt_dir + "annotated", name)
-    #         _save_images(f, foreground_name)
-    #         _save_images(b, background_name)
-    #         _save_images([frameData], original_name)
-    #         annotated_img = get_RGB_with_annotations(frameData)
-    #         _save_image(annotated_img, annotated_name)
-    #         print("Finished processing image " + str(i))
-    #     except Exception as e:
-    #         print("Unable to process image " + str(i))
-    #         print(e)
+        try: 
+            f, b = extract_frameData(frameData)
+            name = dataset_name + str(i)
+            foreground_name = osp.join(tt_dir + "foreground", name)
+            background_name = osp.join(tt_dir + "background", name)
+            original_name = osp.join(tt_dir + "original", name)
+            annotated_name = osp.join(tt_dir + "annotated", name)
+            _save_images(f, foreground_name)
+            _save_images(b, background_name)
+            _save_images([frameData], original_name)
+            annotated_img = get_RGB_with_annotations(frameData)
+            _save_image(annotated_img, annotated_name)
+            print("Finished processing image " + str(i))
+        except Exception as e:
+            print("Unable to process image " + str(i))
+            print(e)
 
-    # copy_dir('validation', 'test')
-    # os.rename('test/original', 'test/background')
+    copy_dir('validation', 'test')
+    os.rename('test/original', 'test/background')
 
     original_names = os.listdir('test/background')
     shuffle(original_names)

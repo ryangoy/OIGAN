@@ -10,6 +10,7 @@ __pycache__/
 checkpoint/
 train/
 test/
+validation/
 
 # C extensions
 *.so
