@@ -40,7 +40,7 @@ parser.add_argument('--seed', type=int, default=123, help='random seed to use. D
 parser.add_argument('--lamb', type=int, default=10, help='DEPRECIATED: weight on L1 term in objective')
 
 parser.add_argument('--l1_bonus', type=int, default=10, help='weight on L1 term in objective')
-parser.add_argument('--sl_bonus', type=int, default=1, help='weight on SLterm in objective')
+parser.add_argument('--sl_bonus', type=int, default=1e9, help='weight on SLterm in objective')
 parser.add_argument('--gan_bonus', type=int, default=1, help='weight on gan term in objective')
 opt = parser.parse_args()
 
