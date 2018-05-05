@@ -33,7 +33,8 @@ parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. de
 parser.add_argument('--cuda', type=bool, default=True, help='use cuda?')
 parser.add_argument('--threads', type=int, default=4, help='number of threads for data loader to use')
 parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123')
-parser.add_argument('--lamb', type=int, default=10, help='weight on L1 term in objective')
+parser.add_argument('--lamb_l1', type=int, default=5, help='weight on L1 term in objective')
+parser.add_argument('--lamb_sll', type=int, default=20, help='weight on SLL term in objective')
 opt = parser.parse_args()
 
 print(opt)
@@ -77,12 +78,14 @@ def train(epoch):
         # train with fake
         fake_ab = torch.cat((real_a, fake_b), 1)
         pred_fake = D.forward(fake_ab.detach())
+
         loss_d_fake = criterionGAN(pred_fake, False)
 
 
         # train with real
         real_ab = torch.cat((real_a, real_b), 1)
         pred_real = D.forward(real_ab)
+
         loss_d_real = criterionGAN(pred_real, True)
 
         
@@ -103,17 +106,20 @@ def train(epoch):
         loss_g_gan = criterionGAN(pred_fake, True)
 
          # Second, G(A) = B
-        loss_g_l1 = criterionL1(fake_b, real_b) * opt.lamb
-        loss_g_sl = criterionSLL(fake_b, real_b, coords)
+        loss_g_l1 = criterionL1(fake_b, real_b) * opt.lamb_l1
+        loss_g_sl = criterionSLL(fake_b, real_b, coords) * opt.lamb_sll
         
-        loss_g = loss_g_gan + loss_g_l1 + loss_g_sl
+        loss_g = 0*loss_g_gan + loss_g_l1 + loss_g_sl
         
         loss_g.backward()
 
         optimizerG.step()
+        optimizerG.step()
         if iteration % 100 == 0:
             print("===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
                 epoch, iteration, len(training_data_loader), loss_d.data[0], loss_g.data[0]))
+
+
 
 def validate():
     avg_psnr = 0
@@ -188,7 +194,7 @@ coords = Variable(coords)
 for epoch in range(1, opt.nEpochs + 1):
     train(epoch)
     validate()
-    if epoch % 50 == 0:
+    if epoch % 10 == 0:
         checkpoint(epoch)
 
 
