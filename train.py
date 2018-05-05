@@ -86,22 +86,21 @@ def add_images(imgs, writer, name, num_steps):
 
 def train(epoch):
     for iteration, batch in enumerate(training_data_loader, 1):
-        num_iter_per_epoch = len(training_data_loader) / training_data_loader.batch_size
-        num_steps = num_iter_per_epoch * (epoch-1) + iteration
-        num_steps = int(num_steps)
 
         # forward
         real_a_cpu, real_b_cpu, coords_cpu = batch[0], batch[1], batch[2]
 
-        add_images(real_a_cpu, writer, "Input Image A", num_steps)
-        add_images(real_b_cpu, writer, "Input Image B", num_steps)
+        if iteration == 0:
+            add_images(real_a_cpu, writer, "Input Image A", epoch)
+            add_images(real_b_cpu, writer, "Input Image B", epoch)
 
         real_a.data.resize_(real_a_cpu.size()).copy_(real_a_cpu)
         real_b.data.resize_(real_b_cpu.size()).copy_(real_b_cpu)
         coords.data.resize_(coords_cpu.size()).copy_(coords_cpu)
 
         fake_b = G(real_a)
-        add_images(fake_b, writer, "Fake Image", num_steps)
+        if iteration == 0:
+            add_images(fake_b, writer, "Fake Image", epoch)
 
         ############################
         # (1) Update D network: maximize log(D(x,y)) + log(1 - D(x,G(x)))
@@ -113,20 +112,23 @@ def train(epoch):
         fake_ab = torch.cat((real_a, fake_b), 1)
         pred_fake = D.forward(fake_ab.detach())
         loss_d_fake = criterionGAN(pred_fake, False)
-        writer.add_scalar("loss_discriminator_fake", loss_d_fake, num_steps) 
+        if iteration == 0:
+            writer.add_scalar("loss_discriminator_fake", loss_d_fake, epoch) 
 
 
         # train with real
         real_ab = torch.cat((real_a, real_b), 1)
         pred_real = D.forward(real_ab)
-        #writer.add_scalar("discriminator_entropy", entropy(pred_real), num_steps)   TODO
+        #writer.add_scalar("discriminator_entropy", entropy(pred_real), epoch)   TODO
         loss_d_real = criterionGAN(pred_real, True)
-        writer.add_scalar("loss_discriminator_real", loss_d_real, num_steps) 
+        if iteration == 0:
+            writer.add_scalar("loss_discriminator_real", loss_d_real, epoch) 
 
         
         # Combined loss
         loss_d = (loss_d_fake + loss_d_real) * 0.5
-        writer.add_scalar("loss_discriminator", loss_d, num_steps) 
+        if iteration == 0:
+            writer.add_scalar("loss_discriminator", loss_d, epoch) 
 
         loss_d.backward()
        
@@ -140,16 +142,20 @@ def train(epoch):
         fake_ab = torch.cat((real_a, fake_b), 1)
         pred_fake = D.forward(fake_ab)
         loss_g_gan = criterionGAN(pred_fake, True) * opt.gan_bonus
-        writer.add_scalar("loss_generator_gan", loss_g_gan, num_steps) 
+        if iteration == 0:
+            writer.add_scalar("loss_generator_gan", loss_g_gan, epoch) 
 
          # Second, G(A) = B
         loss_g_l1 = criterionL1(fake_b, real_b) * opt.l1_bonus
-        writer.add_scalar("loss_generator_l1", loss_g_l1, num_steps) 
+        if iteration == 0:
+            writer.add_scalar("loss_generator_l1", loss_g_l1, epoch) 
         loss_g_sl = criterionSLL(fake_b, real_b, coords) * opt.sl_bonus
-        writer.add_scalar("loss_generator_sl", loss_g_sl, num_steps) 
+        if iteration == 0:
+            writer.add_scalar("loss_generator_sl", loss_g_sl, epoch) 
         
         loss_g = loss_g_gan + loss_g_l1 + loss_g_sl
-        writer.add_scalar("loss_generator", loss_g, num_steps) 
+        if iteration == 0:
+            writer.add_scalar("loss_generator", loss_g, epoch) 
         
         loss_g.backward()
 
@@ -158,9 +164,9 @@ def train(epoch):
             print("===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
                 epoch, iteration, len(training_data_loader), loss_d.data[0], loss_g.data[0]))
 
-def validate():
+def validate(epoch):
     avg_psnr = 0
-    for batch in testing_data_loader:
+    for iteration, batch in enumerate(testing_data_loader):
         input, target = Variable(batch[0], volatile=True), Variable(batch[1], volatile=True)
         if opt.cuda:
             input = input.cuda()
@@ -170,6 +176,9 @@ def validate():
         mse = criterionMSE(prediction, target)
         psnr = 10 * log10(1 / mse.data[0])
         avg_psnr += psnr
+        if iteration == 0:
+            add_images(prediction, writer, "Fake Image (Validation)", epoch)
+    writer.add_scalar("PSNR (Validation)", avg_psnr, epoch)
     print("===> Avg. PSNR: {:.4f} dB".format(avg_psnr / len(testing_data_loader)))
 
 def checkpoint(epoch):
@@ -230,8 +239,8 @@ coords = Variable(coords)
 
 for epoch in range(1, opt.nEpochs + 1):
     train(epoch)
-    validate()
-    if epoch % 50 == 0:
+    validate(epoch)
+    if epoch % 25 == 0:
         checkpoint(epoch)
 
 
