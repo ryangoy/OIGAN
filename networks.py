@@ -24,8 +24,8 @@ class SLLoss(nn.Module):
             m = np.mgrid[0:pred.shape[2]:1, 0:pred.shape[3]:1]
             m = m.T
           
-            cov = [[half_length.cpu().numpy()[0], 0],[0, half_length.cpu().numpy()[1]]]
-            weightings.append(multivariate_normal.pdf(m, mean=center.cpu().numpy(), cov=cov).astype(float))
+            cov = [[half_length.cpu().data.numpy()[0], 0],[0, half_length.cpu().data.numpy()[1]]]
+            weightings.append(multivariate_normal.pdf(m, mean=center.cpu().data.numpy(), cov=cov).astype(float))
 
         
         target_tensor = torch.from_numpy(np.array(weightings))
@@ -33,12 +33,21 @@ class SLLoss(nn.Module):
 
         return target_tensor
 
+    def apply_weightings(self, weightings, imgs):
+        # Applys weighting along all channels of all images
+        split = torch.unbind(imgs, dim=1)
+        weighted_splits = [weightings * i for i in split]
+        weighted_imgs = torch.stack(weighted_splits, dim=1)
+        return weighted_imgs
+
     # pred and label are shape [batch, height, width, channels]
     # coords are of shape [batch, 4]
     def __call__(self, pred, label, coords):
-        weightings = self.get_weighting_tensor(pred, coords)
-        #return self.loss((weightings*pred), (weightings*label))
-        return self.loss((weightings.cuda().float()*pred), (weightings.cuda().float()*label))
+        weightings = self.get_weighting_tensor(pred, coords).cuda().float()
+        pred_weighted = self.apply_weightings(weightings, pred)
+        label_weighted = self.apply_weightings(weightings, label)
+        return self.loss(pred_weighted, label_weighted)
+
 
 class GANLoss(nn.Module):
     def __init__(self, use_lsgan=True, target_real_label=1.0, target_fake_label=0.0,

@@ -15,6 +15,10 @@ import torch.backends.cudnn as cudnn
 from load_data import get_training_set, get_test_set
 import numpy as np
 
+from tensorboardX import SummaryWriter
+writer = SummaryWriter()
+
+
 # Training settings
 parser = argparse.ArgumentParser(description='OIGAN PyTorch implementation')
 parser.add_argument('--dataset', default='sunrgbd', help='type of dataset')
@@ -33,8 +37,13 @@ parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. de
 parser.add_argument('--cuda', type=bool, default=True, help='use cuda?')
 parser.add_argument('--threads', type=int, default=4, help='number of threads for data loader to use')
 parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123')
-parser.add_argument('--lamb_l1', type=int, default=5, help='weight on L1 term in objective')
-parser.add_argument('--lamb_sll', type=int, default=20, help='weight on SLL term in objective')
+
+parser.add_argument('--lamb', type=int, default=10, help='DEPRECIATED: weight on L1 term in objective')
+
+parser.add_argument('--l1_bonus', type=int, default=10, help='weight on L1 term in objective')
+parser.add_argument('--sl_bonus', type=int, default=1e9, help='weight on SLterm in objective')
+parser.add_argument('--gan_bonus', type=int, default=1, help='weight on gan term in objective')
+
 opt = parser.parse_args()
 
 print(opt)
@@ -56,18 +65,44 @@ training_data_loader = DataLoader(dataset=train_set, num_workers=opt.threads, ba
 testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batch_size=opt.testBatchSize, shuffle=False)
 
 
+def add_images(imgs, writer, name, num_steps):
+    imgs = imgs.clone()
+    _, C, _, _ = imgs.shape
+    img = imgs[0].cpu()
+    if C == 3:
+        writer.add_image(name, img, num_steps)
 
+    if C == 4:
+        rgb, d = torch.split(img, [3,1], dim=0)
+        writer.add_image(name + "RGB", rgb, num_steps)
+        writer.add_image(name + "D", d, num_steps)
+
+    if C == 8:
+        fore_rgb, fore_d, back_rgb, back_d = np.array_split(img,  [3,4,7],axis=0)
+        writer.add_image(name + "foreground RGB", fore_rgb, num_steps)
+        writer.add_image(name + "foreground D", fore_d, num_steps)
+        writer.add_image(name + "background RGB", back_rgb, num_steps)
+        writer.add_image(name + "background D", back_d, num_steps)
+        
 
 
 def train(epoch):
     for iteration, batch in enumerate(training_data_loader, 1):
+
         # forward
         real_a_cpu, real_b_cpu, coords_cpu = batch[0], batch[1], batch[2]
+
+        if iteration == 0:
+            add_images(real_a_cpu, writer, "Input Image A", epoch)
+            add_images(real_b_cpu, writer, "Input Image B", epoch)
+
         real_a.data.resize_(real_a_cpu.size()).copy_(real_a_cpu)
         real_b.data.resize_(real_b_cpu.size()).copy_(real_b_cpu)
         coords.data.resize_(coords_cpu.size()).copy_(coords_cpu)
 
         fake_b = G(real_a)
+        if iteration == 0:
+            add_images(fake_b, writer, "Fake Image", epoch)
 
         ############################
         # (1) Update D network: maximize log(D(x,y)) + log(1 - D(x,G(x)))
@@ -80,17 +115,25 @@ def train(epoch):
         pred_fake = D.forward(fake_ab.detach())
 
         loss_d_fake = criterionGAN(pred_fake, False)
+        if iteration == 0:
+            writer.add_scalar("loss_discriminator_fake", loss_d_fake, epoch) 
 
 
         # train with real
         real_ab = torch.cat((real_a, real_b), 1)
         pred_real = D.forward(real_ab)
 
+        #writer.add_scalar("discriminator_entropy", entropy(pred_real), epoch)   TODO
+
         loss_d_real = criterionGAN(pred_real, True)
+        if iteration == 0:
+            writer.add_scalar("loss_discriminator_real", loss_d_real, epoch) 
 
         
         # Combined loss
         loss_d = (loss_d_fake + loss_d_real) * 0.5
+        if iteration == 0:
+            writer.add_scalar("loss_discriminator", loss_d, epoch) 
 
         loss_d.backward()
        
@@ -103,13 +146,23 @@ def train(epoch):
         # First, G(A) should fake the discriminator
         fake_ab = torch.cat((real_a, fake_b), 1)
         pred_fake = D.forward(fake_ab)
-        loss_g_gan = criterionGAN(pred_fake, True)
+        loss_g_gan = criterionGAN(pred_fake, True) * opt.gan_bonus
+        if iteration == 0:
+            writer.add_scalar("loss_generator_gan", loss_g_gan, epoch) 
 
          # Second, G(A) = B
-        loss_g_l1 = criterionL1(fake_b, real_b) * opt.lamb_l1
-        loss_g_sl = criterionSLL(fake_b, real_b, coords) * opt.lamb_sll
+
+        loss_g_l1 = criterionL1(fake_b, real_b) * opt.l1_bonus
+        if iteration == 0:
+            writer.add_scalar("loss_generator_l1", loss_g_l1, epoch) 
+        loss_g_sl = criterionSLL(fake_b, real_b, coords) * opt.sl_bonus
+        if iteration == 0:
+            writer.add_scalar("loss_generator_sl", loss_g_sl, epoch) 
         
-        loss_g = 0*loss_g_gan + loss_g_l1 + loss_g_sl
+        loss_g = loss_g_gan + loss_g_l1 + loss_g_sl
+        if iteration == 0:
+            writer.add_scalar("loss_generator", loss_g, epoch) 
+
         
         loss_g.backward()
 
@@ -120,10 +173,10 @@ def train(epoch):
                 epoch, iteration, len(training_data_loader), loss_d.data[0], loss_g.data[0]))
 
 
+def validate(epoch):
 
-def validate():
     avg_psnr = 0
-    for batch in testing_data_loader:
+    for iteration, batch in enumerate(testing_data_loader):
         input, target = Variable(batch[0], volatile=True), Variable(batch[1], volatile=True)
         if opt.cuda:
             input = input.cuda()
@@ -133,6 +186,9 @@ def validate():
         mse = criterionMSE(prediction, target)
         psnr = 10 * log10(1 / mse.data[0])
         avg_psnr += psnr
+        if iteration == 0:
+            add_images(prediction, writer, "Fake Image (Validation)", epoch)
+    writer.add_scalar("PSNR (Validation)", avg_psnr, epoch)
     print("===> Avg. PSNR: {:.4f} dB".format(avg_psnr / len(testing_data_loader)))
 
 def checkpoint(epoch):
@@ -193,8 +249,10 @@ coords = Variable(coords)
 
 for epoch in range(1, opt.nEpochs + 1):
     train(epoch)
-    validate()
+
+    validate(epoch)
     if epoch % 10 == 0:
+
         checkpoint(epoch)
 
 
