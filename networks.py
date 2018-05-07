@@ -19,13 +19,15 @@ class SLLoss(nn.Module):
     def get_weighting_tensor(self, pred, coords):
         weightings = []
         for coord in coords:
-            center = coord[:2]
-            half_length = coord[2:]
+            center = coord[:2].cpu().data.numpy() / np.array([730/32, 530/32]) 
+            half_length = coord[2:].cpu().data.numpy() / np.array([730/32, 530/32])
+
+
             m = np.mgrid[0:pred.shape[2]:1, 0:pred.shape[3]:1]
             m = m.T
           
-            cov = [[half_length.cpu().data.numpy()[0], 0],[0, half_length.cpu().data.numpy()[1]]]
-            weightings.append(multivariate_normal.pdf(m, mean=center.cpu().data.numpy(), cov=cov).astype(float))
+            cov = [[half_length[0], 0],[0, half_length[1]]]
+            weightings.append(multivariate_normal.pdf(m, mean=center, cov=cov).astype(float))
 
         
         target_tensor = torch.from_numpy(np.array(weightings))
