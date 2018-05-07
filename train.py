@@ -14,7 +14,7 @@ from load_data import save_img
 
 import torch.backends.cudnn as cudnn
 
-from load_data import get_training_set, get_test_set
+from load_data import get_training_set, get_test_set, get_val_set
 import numpy as np
 
 from tensorboardX import SummaryWriter
@@ -65,7 +65,7 @@ if opt.cuda:
 
 root_path = "data_processing/"
 train_set = get_training_set(root_path)
-test_set = get_test_set(root_path)
+test_set = get_val_set(root_path)
 training_data_loader = DataLoader(dataset=train_set, num_workers=opt.threads, batch_size=opt.batchSize, shuffle=True)
 testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batch_size=opt.testBatchSize, shuffle=False)
 
@@ -141,7 +141,7 @@ def train(epoch):
         fake_ab = torch.cat((real_a, fake_b), 1)
         pred_fake = D.forward(fake_ab.detach())
 
-        loss_d_fake = criterionGAN(pred_fake, False)
+        loss_d_fake = criterionGAN(pred_fake, False, coords)
         if iteration == 1:
             writer.add_scalar("loss_discriminator_fake", loss_d_fake, epoch) 
 
@@ -152,7 +152,7 @@ def train(epoch):
 
         #writer.add_scalar("discriminator_entropy", entropy(pred_real), epoch)   TODO
 
-        loss_d_real = criterionGAN(pred_real, True)
+        loss_d_real = criterionGAN(pred_real, True, coords)
         if iteration == 1:
             writer.add_scalar("loss_discriminator_real", loss_d_real, epoch) 
 
@@ -173,7 +173,7 @@ def train(epoch):
         # First, G(A) should fake the discriminator
         fake_ab = torch.cat((real_a, fake_b), 1)
         pred_fake = D.forward(fake_ab)
-        loss_g_gan = criterionGAN(pred_fake, True) * opt.gan_bonus
+        loss_g_gan = criterionGAN(pred_fake, True, coords) * opt.gan_bonus
         if iteration == 1:
             writer.add_scalar("loss_generator_gan", loss_g_gan, epoch) 
 

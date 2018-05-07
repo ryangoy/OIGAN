@@ -19,13 +19,13 @@ class SLLoss(nn.Module):
     def get_weighting_tensor(self, pred, coords):
         weightings = []
         for coord in coords:
-            center = coord[:2]
-            half_length = coord[2:]
+            center = coord[:2].cpu().data.numpy() / np.array([730/256, 530/256]) 
+            half_length = coord[2:].cpu().data.numpy() / np.array([730/256, 530/256])
             m = np.mgrid[0:pred.shape[2]:1, 0:pred.shape[3]:1]
             m = m.T
           
-            cov = [[half_length.cpu().data.numpy()[0], 0],[0, half_length.cpu().data.numpy()[1]]]
-            weightings.append(multivariate_normal.pdf(m, mean=center.cpu().data.numpy(), cov=cov).astype(float))
+            cov = [[half_length[0], 0],[0, half_length[1]]]
+            weightings.append(multivariate_normal.pdf(m, mean=center, cov=cov).astype(float))
 
         
         target_tensor = torch.from_numpy(np.array(weightings))
@@ -81,9 +81,38 @@ class GANLoss(nn.Module):
             target_tensor = self.fake_label_var
         return target_tensor
 
-    def __call__(self, input, target_is_real):
+    def get_weighting_tensor(self, pred, coords):
+        weightings = []
+        for coord in coords:
+            center = coord[:2].cpu().data.numpy() / np.array([730/32, 530/32]) 
+            half_length = coord[2:].cpu().data.numpy() / np.array([730/32, 530/32])
+
+
+            m = np.mgrid[0:pred.shape[2]:1, 0:pred.shape[3]:1]
+            m = m.T
+          
+            cov = [[half_length[0], 0],[0, half_length[1]]]
+            weightings.append(multivariate_normal.pdf(m, mean=center, cov=cov).astype(float))
+
+        
+        target_tensor = torch.from_numpy(np.array(weightings))
+        target_tensor = Variable(target_tensor, requires_grad=False)
+
+        return target_tensor
+
+    def apply_weightings(self, weightings, imgs):
+        # Applys weighting along all channels of all images
+        split = torch.unbind(imgs, dim=1)
+        weighted_splits = [weightings * i for i in split]
+        weighted_imgs = torch.stack(weighted_splits, dim=1)
+        return weighted_imgs
+
+    def __call__(self, input, target_is_real, coords):
+        weight_tensor = self.get_weighting_tensor(input, coords).cuda().float()
         target_tensor = self.get_target_tensor(input, target_is_real)
-        return self.loss(input, target_tensor.cuda())
+        pred_weighted = self.apply_weightings(weight_tensor, input)
+        label_weighted = self.apply_weightings(weight_tensor, target_tensor.cuda())
+        return self.loss(pred_weighted, label_weighted)
 
 
 def initialize_weights(m):
