@@ -26,6 +26,7 @@ test_split =0.95
 # ----------------------------------------------
 
 #frameDir = "/Users/jeff/Documents/cs280/project/SUNRGB/SUNRGBD/kv1/NYUdata/"
+#frameDir = "/home/ubuntu/SUNRGBD/kv2/kinect2data/"
 
 # https://stackoverflow.com/questions/1994488/copy-file-or-directories-recursively-in-python
 def copy_dir(src, dst):

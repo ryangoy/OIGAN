@@ -26,7 +26,7 @@ parser = argparse.ArgumentParser(description='OIGAN PyTorch implementation')
 parser.add_argument('--dataset', default='sunrgbd', help='type of dataset')
 parser.add_argument('--batchSize', type=int, default=8, help='training batch size')
 parser.add_argument('--testBatchSize', type=int, default=1, help='testing batch size')
-parser.add_argument('--nEpochs', type=int, default=200, help='number of epochs to train for')
+parser.add_argument('--nEpochs', type=int, default=400, help='number of epochs to train for')
 parser.add_argument('--input_channels', type=int, default=8, help='input image channels')
 parser.add_argument('--output_channels', type=int, default=4, help='output image channels')
 parser.add_argument('--num_gen_filters', type=int, default=64, help='generator filters in first conv layer')
@@ -42,7 +42,7 @@ parser.add_argument('--seed', type=int, default=123, help='random seed to use. D
 
 parser.add_argument('--lamb', type=int, default=10, help='DEPRECIATED: weight on L1 term in objective')
 
-parser.add_argument('--l1_bonus', type=int, default=10, help='weight on L1 term in objective')
+parser.add_argument('--l1_bonus', type=int, default=1, help='weight on L1 term in objective')
 parser.add_argument('--sl_bonus', type=int, default=1e9, help='weight on SLterm in objective')
 parser.add_argument('--gan_bonus', type=int, default=1, help='weight on gan term in objective')
 
@@ -209,6 +209,8 @@ def validate(epoch):
             input = input.cuda()
             target = target.cuda()
 
+
+        add_images(input, writer, "Real Image(Validation)", epoch)
         prediction = G(input)
         mse = criterionMSE(prediction, target)
         psnr = 10 * log10(1 / mse.data[0])
