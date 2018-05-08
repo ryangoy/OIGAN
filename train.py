@@ -40,14 +40,20 @@ parser.add_argument('--cuda', type=bool, default=True, help='use cuda?')
 parser.add_argument('--threads', type=int, default=4, help='number of threads for data loader to use')
 parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123')
 
+# Optimizations
 parser.add_argument('--lamb', type=int, default=10, help='DEPRECIATED: weight on L1 term in objective')
-
 parser.add_argument('--l1_bonus', type=int, default=1, help='weight on L1 term in objective')
 parser.add_argument('--sl_bonus', type=int, default=1e9, help='weight on SLterm in objective')
 parser.add_argument('--gan_bonus', type=int, default=1, help='weight on gan term in objective')
+parser.add_argument('--include_depth', type=bool, default=True, help='Include the depth layer?')
+parser.add_argument('--step_ratio', type=int, default=1, help='Number of G steps wrt D steps')
 
+
+# Restore
 parser.add_argument('--restore_G', type=str, default=None, help='generative model file to use')
 parser.add_argument('--restore_D', type=str, default=None, help='discriminative model file to use')
+
+
 
 opt = parser.parse_args()
 
@@ -102,6 +108,15 @@ def add_images(imgs, writer, name, num_steps):
         writer.add_image(name + "RGB", rgb, num_steps)
         writer.add_image(name + "D", d, num_steps)
 
+    if C == 6:
+        # Untested haha
+        back_rgb, fore_rgb = torch.split(img, [3,3], dim=0)
+        back_rgb = unorm(back_rgb)
+        fore_rgb = unorm(fore_rgb)
+        writer.add_image(name + "foreground RGB", fore_rgb, num_steps)
+        writer.add_image(name + "background RGB", back_rgb, num_steps)
+
+
     if C == 8:
         back_rgb, back_d, fore_rgb, fore_d = np.array_split(img,  [3,4,7],axis=0)
         fore_rgb = unorm(fore_rgb)
@@ -133,38 +148,40 @@ def train(epoch):
 
         ############################
         # (1) Update D network: maximize log(D(x,y)) + log(1 - D(x,G(x)))
+        # (Update D network less frequent as G network to let G learn more)
         ###########################
 
-        optimizerD.zero_grad()
+        if iteration % opt.step_ratio == 0:
+            optimizerD.zero_grad()
         
-        # train with fake
-        fake_ab = torch.cat((real_a, fake_b), 1)
-        pred_fake = D.forward(fake_ab.detach())
+            # train with fake
+            fake_ab = torch.cat((real_a, fake_b), 1)
+            pred_fake = D.forward(fake_ab.detach())
 
-        loss_d_fake = criterionGAN(pred_fake, False)
-        if iteration == 1:
-            writer.add_scalar("loss_discriminator_fake", loss_d_fake, epoch) 
+            loss_d_fake = criterionGAN(pred_fake, False)
+            if iteration == 1:
+                writer.add_scalar("loss_discriminator_fake", loss_d_fake, epoch) 
 
 
-        # train with real
-        real_ab = torch.cat((real_a, real_b), 1)
-        pred_real = D.forward(real_ab)
+            # train with real
+            real_ab = torch.cat((real_a, real_b), 1)
+            pred_real = D.forward(real_ab)
 
-        #writer.add_scalar("discriminator_entropy", entropy(pred_real), epoch)   TODO
+            #writer.add_scalar("discriminator_entropy", entropy(pred_real), epoch)   TODO
 
-        loss_d_real = criterionGAN(pred_real, True)
-        if iteration == 1:
-            writer.add_scalar("loss_discriminator_real", loss_d_real, epoch) 
+            loss_d_real = criterionGAN(pred_real, True)
+            if iteration == 1:
+                writer.add_scalar("loss_discriminator_real", loss_d_real, epoch) 
 
         
-        # Combined loss
-        loss_d = (loss_d_fake + loss_d_real) * 0.5
-        if iteration == 1:
-            writer.add_scalar("loss_discriminator", loss_d, epoch) 
+            # Combined loss
+            loss_d = (loss_d_fake + loss_d_real) * 0.5
+            if iteration == 1:
+                writer.add_scalar("loss_discriminator", loss_d, epoch) 
 
-        loss_d.backward()
+            loss_d.backward()
        
-        optimizerD.step()
+            optimizerD.step()
 
         ############################
         # (2) Update G network: maximize log(D(x,G(x))) + L1(y,G(x))
