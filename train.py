@@ -43,7 +43,7 @@ parser.add_argument('--seed', type=int, default=123, help='random seed to use. D
 # Optimizations
 parser.add_argument('--lamb', type=int, default=10, help='DEPRECIATED: weight on L1 term in objective')
 parser.add_argument('--l1_bonus', type=int, default=1, help='weight on L1 term in objective')
-parser.add_argument('--sl_bonus', type=int, default=1e9, help='weight on SLterm in objective')
+parser.add_argument('--sl_bonus', type=int, default=1, help='weight on SLterm in objective')
 parser.add_argument('--gan_bonus', type=int, default=1, help='weight on gan term in objective')
 parser.add_argument('--include_depth', type=int, default=1, help='1: include depth. 0: No')
 parser.add_argument('--step_ratio', type=int, default=1, help='Number of G steps wrt D steps')
