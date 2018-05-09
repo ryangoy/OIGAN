@@ -45,7 +45,7 @@ parser.add_argument('--lamb', type=int, default=10, help='DEPRECIATED: weight on
 parser.add_argument('--l1_bonus', type=int, default=1, help='weight on L1 term in objective')
 parser.add_argument('--sl_bonus', type=int, default=1e9, help='weight on SLterm in objective')
 parser.add_argument('--gan_bonus', type=int, default=1, help='weight on gan term in objective')
-parser.add_argument('--include_depth', type=bool, default=True, help='Include the depth layer?')
+parser.add_argument('--include_depth', type=int, default=1, help='1: include depth. 0: No')
 parser.add_argument('--step_ratio', type=int, default=1, help='Number of G steps wrt D steps')
 
 
@@ -127,12 +127,28 @@ def add_images(imgs, writer, name, num_steps):
         writer.add_image(name + "background D", back_d, num_steps)
         
 
+def clear_depth_layers(imgs):
+    # For now, it will 0 out this layer so that there is no useful information
+    _, C, _, _ = imgs.shape
+
+    if C == 4:
+        imgs[:,3] *= 0
+
+    if C == 8:
+        imgs[:,3] *= 0
+        imgs[:,7] *= 0
+    
+    return imgs
 
 def train(epoch):
     for iteration, batch in enumerate(training_data_loader, 1):
 
         # forward
         real_a_cpu, real_b_cpu, coords_cpu = batch[0], batch[1], batch[2]
+
+        if not opt.include_depth:
+            real_a_cpu = clear_depth_layers(real_a_cpu)
+            real_b_cpu = clear_depth_layers(real_b_cpu)
 
         if iteration == 1:
             add_images(real_a_cpu, writer, "Input Image A", epoch)
@@ -221,6 +237,10 @@ def validate(epoch):
 
     avg_psnr = 0
     for iteration, batch in enumerate(testing_data_loader, 1):
+        if not opt.include_depth:
+            batch[0] = clear_depth_layers(batch[0])
+            batch[1] = clear_depth_layers(batch[1])
+
         input, target = Variable(batch[0], volatile=True), Variable(batch[1], volatile=True)
         if opt.cuda:
             input = input.cuda()
