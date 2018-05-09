@@ -12,6 +12,7 @@ checkpoint/
 train/
 test/
 validation/
+runs/
 
 # C extensions
 *.so
