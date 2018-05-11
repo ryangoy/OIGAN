@@ -19,7 +19,10 @@ opt = parser.parse_args()
 print(opt)
 
 
-netG = torch.load(opt.model)
+if not opt.cuda:
+    netG = torch.load(opt.model, map_location=lambda storage, location: storage)
+else:
+    netG = torch.load(opt.model)
 
 fg_image_dir = "data_processing/test/foreground/"
 bg_image_dir = "data_processing/test/background/"
